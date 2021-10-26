@@ -15,12 +15,12 @@ setup(
     author='Anton Tsukanov',
     author_email='tsukanov@bionet.nsc.ru',
     url='http://github.com/ubercomrade/enrest',
-    #package_dir={'enrest' : 'enrest'},
+    package_dir={'enrest' : 'enrest'},
     packages=['enrest'],
     package_data={
         'data': ['*.fa'],
     },
-    scripts=['bin/enrest.py',],
+    scripts=['bin/enREST.py',],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
