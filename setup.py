@@ -9,7 +9,7 @@ install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy', 'matplotlib']
 
 
 setup(
-    name='enrest',
+    name='enREST',
     version='0.0.1',
     description='DEG analisys',
     author='Anton Tsukanov',
