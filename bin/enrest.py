@@ -17,9 +17,9 @@ def parse_args():
     parser.add_argument('output', action='store', help='output dir')
     parser.add_argument('-t', '--tag', action='store', type=str, dest='tag',
                         required=False, default='results', help='prefix of output files -> $tag_$otherpart')
-    parser.add_argument('-m', '--method', action='store', choices=['montecarlo', 'fisher'], metavar='N',
-                        type=str, default='montecarlo'
-         help='Method to calculate statistics of enrichment (montecarlo or fisher), default= montecarlo')
+    parser.add_argument('-m', '--method', action='store', choices=['montecarlo', 'fisher'],
+                        metavar='N', type=str, default='montecarlo', 
+                        help='Method to calculate statistics of enrichment (montecarlo or fisher), default= montecarlo')
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -75,13 +75,13 @@ def main():
     
     this_dir, this_filename = os.path.split(__file__)
     if promoters == 'mm10':
-        path_to_promoters = os.path.join(this_dir, "data", "mm10.fasta")
+        path_to_promoters = os.path.join(this_dir, "data", "mm10.ensembl.promoters.fa")
     elif promoters == 'hg38':
-        path_to_promoters = os.path.join(this_dir, "data", "hg38.fasta")
-    elif promoters == 'tair10':
-        path_to_promoters = os.path.join(this_dir, "data", "tair10.fasta")
-    elif promoters == 'b73':
-        path_to_promoters = os.path.join(this_dir, "data", "b73_v5.fasta")
+        path_to_promoters = os.path.join(this_dir, "data", "hg38.ensembl.promoters.fa")
+    # elif promoters == 'tair10':
+    #     path_to_promoters = os.path.join(this_dir, "data", "tair10.fasta")
+    # elif promoters == 'b73':
+    #     path_to_promoters = os.path.join(this_dir, "data", "b73_v5.fasta")
         
     print('-'*30)
     print('Read DEG table')
