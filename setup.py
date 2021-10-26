@@ -8,13 +8,13 @@ install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy', 'matplotlib']
 
 
 setup(
-    name='enrestKk',
+    name='enrest',
     version='0.0.1',
     description='DEG analisys',
     author='Anton Tsukanov',
     author_email='tsukanov@bionet.nsc.ru',
     url='http://github.com/ubercomrade/enrest',
-    package_dir={'enrest' : 'enrest'},
+    package_dir={'' : 'enrest'},
     packages=['enrest'],
     package_data={
         'data': ['*.fa'],
