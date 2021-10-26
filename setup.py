@@ -15,11 +15,9 @@ setup(
     author_email='tsukanov@bionet.nsc.ru',
     url='http://github.com/ubercomrade/enrest',
     package_dir={'enrest' : 'enrest'},
-    packages=[
-        'enrest',
-    ],
+    packages=['enrest'],
     package_data={
-        'data': ['*.fasta'],
+        'data': ['*.fa'],
     },
     scripts=['bin/enrest.py',],
     classifiers=[
