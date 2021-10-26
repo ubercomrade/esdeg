@@ -14,7 +14,7 @@ setup(
     author='Anton Tsukanov',
     author_email='tsukanov@bionet.nsc.ru',
     url='http://github.com/ubercomrade/enrest',
-    package_dir={'' : 'enrest'},
+    package_dir={'enrest' : 'enrest'},
     packages=['enrest'],
     package_data={
         'data': ['*.fa'],
