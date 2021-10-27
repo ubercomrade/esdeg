@@ -107,7 +107,7 @@ def main():
     print('Run tests:')
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         print(f'{index}. {condition} - condition')
-        deg_ids = get_deg_gene_ids(deg_table, cond)
+        deg_ids = get_deg_gene_ids(deg_table, condition)
         other_ids = get_other_gene_ids(deg_table)
         if method == 'montecarlo':
             deg_scores, other_scores = split_scores_by_gene_ids(scan_results,
