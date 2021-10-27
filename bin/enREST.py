@@ -92,7 +92,7 @@ def main():
     matrix, matrix_length, middle_score = matrix_parser(path_to_matrix)
     print('-'*30)
     print('Read promoters')
-    promoters = fasta_parser(promoters_fasta_path)
+    promoters = fasta_parser(path_to_promoters)
     print('-'*30)
     print('Promoters scanning')
     scan_results = scan_promoters(promoters, matrix)
