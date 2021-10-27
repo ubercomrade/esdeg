@@ -73,7 +73,7 @@ def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
             other_scores.append(score)
         else:
             continue
-    print(set(deg_ids) - set(exist))
+    #print(set(deg_ids) - set(exist))
     return np.array(deg_scores), np.array(other_scores)
 
 

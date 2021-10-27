@@ -26,7 +26,7 @@ def parse_args():
     return(parser.parse_args())
 
 
-def run_montecarlo(deg_scores, other_scores, threshold):
+def run_montecarlo(deg_scores, other_scores, threshold_table):
     results_montecarlo = []
     for index in range(0, len(threshold_table), 3):
         threshold, fpr = threshold_table[index]
@@ -35,7 +35,7 @@ def run_montecarlo(deg_scores, other_scores, threshold):
     return results_montecarlo
 
 
-def run_fisher(deg_scores, other_scores, threshold):
+def run_fisher(deg_scores, other_scores, threshold_table):
     results_fisher = []
     for index in range(0, len(threshold_table), 3):
         threshold, fpr = threshold_table[index]
@@ -94,7 +94,7 @@ def main():
     print('Read promoters')
     promoters = fasta_parser(path_to_promoters)
     print('-'*30)
-    print('Promoters scanning')
+    print('Scan promotrers')
     scan_results = scaner(promoters, matrix)
     best_results = get_best_scores(scan_results)
     print('-'*30)
@@ -113,13 +113,13 @@ def main():
             deg_scores, other_scores = split_scores_by_gene_ids(scan_results,
                                                                     deg_ids,
                                                                     other_ids)
-            results = run_montecarlo(deg_scores, other_scores, threshold)
+            results = run_montecarlo(deg_scores, other_scores, threshold_table)
             create_plot(results, wdir, tag, condition, method)
         elif method == 'fisher':
             deg_scores, other_scores = split_scores_by_gene_ids(best_results,
                                                                     deg_ids,
                                                                     other_ids)
-            results = run_fisher(deg_scores, other_scores, threshold)
+            results = run_fisher(deg_scores, other_scores, threshold_table)
             create_plot(results, wdir, tag, condition, method)
         else:
             sys.stderr.write("I don't know that method, I exit, See You!\n")
