@@ -95,7 +95,7 @@ def main():
     promoters = fasta_parser(path_to_promoters)
     print('-'*30)
     print('Promoters scanning')
-    scan_results = scan_promoters(promoters, matrix)
+    scan_results = scanner(promoters, matrix)
     best_results = get_best_scores(scan_results)
     print('-'*30)
     print('Calculate threshold table')
