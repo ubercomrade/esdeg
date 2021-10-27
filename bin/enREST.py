@@ -75,9 +75,9 @@ def main():
     
     this_dir, this_filename = os.path.split(__file__)
     if promoters == 'mm10':
-        path_to_promoters = os.path.join(this_dir, "data", "mm10.ensembl.promoters.fa")
+        path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
     elif promoters == 'hg38':
-        path_to_promoters = os.path.join(this_dir, "data", "hg38.ensembl.promoters.fa")
+        path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
     # elif promoters == 'tair10':
     #     path_to_promoters = os.path.join(this_dir, "data", "tair10.fasta")
     # elif promoters == 'b73':
