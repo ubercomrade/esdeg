@@ -48,7 +48,7 @@ def to_score(matrix, norm_value):
     
     
 def matrix_parser(path):
-    matrix = read_matrix(matrix_path, 0)
+    matrix = read_matrix(path, 0)
     matrix = pcm_to_pfm(matrix)
     matrix = pfm_to_pwm(matrix)
     matrix_length = matrix.shape[1]
