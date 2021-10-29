@@ -45,7 +45,8 @@ def run_montecarlo(deg_scores, other_scores, threshold_table):
     for index in range(0, len(threshold_table)):
         threshold, fpr = threshold_table[index]
         z_score = montecarlo(deg_scores, other_scores, threshold)
-        results_montecarlo.append((fpr, stats.norm.sf(abs(z_score))))
+        pval = stats.norm.sf(abs(z_score))
+        results_montecarlo.append(pval)
     return results_montecarlo
 
 
@@ -54,7 +55,7 @@ def run_fisher(deg_scores, other_scores, threshold_table):
     for index in range(0, len(threshold_table)):
         threshold, fpr = threshold_table[index]
         pval = fisher_test(deg_scores, other_scores, threshold)
-        results_fisher.append((fpr, pval))
+        results_fisher.append(pval)
     return results_fisher
 
 

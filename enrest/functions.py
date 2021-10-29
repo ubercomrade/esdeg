@@ -129,6 +129,7 @@ def get_other_gene_ids(df, padj_thr=0.1):
 
 def write_table(data, path):
     with open(path, 'w') as file:
+        file.write('\t'.join(['ID'] + ['ALL']*5 + ['UP']*5 + ['DOWN']*5) + '\n')
         for line in data:
             file.write('\t'.join(map(str, line)) + '\n')
     pass
