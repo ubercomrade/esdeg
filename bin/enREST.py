@@ -207,7 +207,7 @@ def main():
     tag = args.tag
     method = args.method
     
-    if args.subparser_name == 'case':
+    if args.subparser_name == 'matrix':
         matrix_case(args)
     elif args.subparser_name == 'hocomoco':
         hocomoco_case(args)   
