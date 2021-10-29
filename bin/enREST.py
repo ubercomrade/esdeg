@@ -139,7 +139,7 @@ def matrix_case(args):
 
 def hocomoco_case(args):
     path_to_deg = args.deg
-    path_to_db = args.matrix
+    path_to_db = args.db
     output_path = args.output
     promoters = args.promoters
     method = args.method
@@ -201,14 +201,7 @@ def hocomoco_case(args):
 
 
 def main():
-    args = parse_args()
-    path_to_deg = args.deg
-    path_to_matrix = args.matrix
-    output_path = args.output
-    promoters = args.promoters
-    tag = args.tag
-    method = args.method
-    
+    args = parse_args()    
     if args.subparser_name == 'matrix':
         matrix_case(args)
     elif args.subparser_name == 'hocomoco':
