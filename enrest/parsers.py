@@ -13,6 +13,23 @@ def read_matrix(path, pos):
     return np.array(matrix).T
 
 
+def read_matrix_list(path):
+    container = []
+    matrix = []
+    with open(path) as file:
+        matrix_name = file.readline().strip()[1:]
+        for line in file:
+            if line.startswith(">"):
+                container.append((matrix_name, np.array(matrix).T))
+                matrix_name = line.strip()[1:]
+                matrix = []
+            else:
+                line = [float(i) for i in line.strip().split('\t')]
+                matrix.append(line)
+    matrix.append(line)
+    return container
+
+
 def pfm_to_pwm(pfm):
     background = 0.25
     pwm = np.log2(pfm / background)
@@ -52,8 +69,21 @@ def matrix_parser(path):
     matrix = pcm_to_pfm(matrix)
     matrix = pfm_to_pwm(matrix)
     matrix_length = matrix.shape[1]
-    middle_score = to_score(matrix, 0.5)
+    middle_score = to_score(matrix, 0.6)
     return matrix, matrix_length, middle_score
+
+
+def hocomoco_parser(path):
+    container = []
+    matrices = read_matrix_list(path)
+    for index in range(len(martices)):
+        name, matrix = matrices[index]
+        matrix = pcm_to_pfm(matrix)
+        matrix = pfm_to_pwm(matrix)
+        matrix_length = matrix.shape[1]
+        middle_score = to_score(matrix, 0.6)
+        container.append([name, matrix, matrix_length, middle_score])
+    return container
 
 
 ### FASTA PART ###

@@ -44,23 +44,18 @@ def get_threshold(scores):
     return container
 
 
-def choose_threshold(path, fpr_for_thr):
-    container = list()
-    append = container.append
-    with open(path, 'r') as file:
-        for line in file:
-            append(tuple(map(float, line.strip().split())))
-    file.close()
-    container = sorted(container, key=itemgetter(1))
-    last_score, last_fpr = container[0]
-    for line in container:
-        if line[1] > fpr_for_thr:
-            break
-        else:
-            last_score, last_fpr = line
-    return(last_score)
+def calculate_fpr(n):
+    if n == 0:
+        return(0.0005)
+    else:
+        parameter = 1.5
+        fpr = 0.0005
+        for i in range(n):
+            fpr = fpr / parameter
+            parameter = 1 + parameter / 2
+        return(fpr)
 
-
+    
 def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
     deg_scores = []
     other_scores = []
@@ -130,3 +125,10 @@ def get_other_gene_ids(df, padj_thr=0.1):
     df = df[df['padj'] > padj_thr]
     gene_ids = [i for i in df['geneName'] if isinstance(i, str)]
     return gene_ids
+
+
+def write_table(data, path):
+    with open(path, 'w') as file:
+        for line in data:
+            file.write('\t'.join(map(str, line)) + '\n')
+    pass
