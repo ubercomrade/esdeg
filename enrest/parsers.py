@@ -76,7 +76,7 @@ def matrix_parser(path):
 def hocomoco_parser(path):
     container = []
     matrices = read_matrix_list(path)
-    for index in range(len(martices)):
+    for index in range(len(matrices)):
         name, matrix = matrices[index]
         matrix = pcm_to_pfm(matrix)
         matrix = pfm_to_pwm(matrix)
