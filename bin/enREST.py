@@ -165,9 +165,9 @@ def hocomoco_case(args):
     print('-'*30)
     container = []
     for i in range(number_of_matrices):
-        name, matrix, matrix_length, middle_score = matrices[0]
+        name, matrix, matrix_length, middle_score = matrices[i]
         container.append([name])
-        print(f'Work with {i}. {name}')
+        print(f'{i+1}. {name}:')
         print('Scan promotrers')
         scan_results = scaner(promoters, matrix)
         best_results = get_best_scores(scan_results)

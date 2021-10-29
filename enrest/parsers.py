@@ -26,7 +26,7 @@ def read_matrix_list(path):
             else:
                 line = [float(i) for i in line.strip().split('\t')]
                 matrix.append(line)
-    matrix.append(line)
+    container.append((matrix_name, np.array(matrix).T))
     return container
 
 
