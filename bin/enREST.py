@@ -129,6 +129,7 @@ def matrix_case(args):
         else:
             sys.stderr.write("I don't know that method, I exit, See You!\n")
             sys.exit(0)
+        container[-1] += results
     print('-'*30)
     write_table(container, output_path)
     print('All done. Exit')
