@@ -114,7 +114,7 @@ def matrix_case(args):
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
     fprs_choosen = [calculate_fpr(i) for i in range(9)]
-    print(choosen)
+    print(fprs_choosen)
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     print('-'*30)
