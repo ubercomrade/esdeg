@@ -114,7 +114,6 @@ def matrix_case(args):
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
     fprs_choosen = [calculate_fpr(i) for i in range(9)]
-    print(fprs_choosen)
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     print('-'*30)
@@ -132,7 +131,7 @@ def matrix_case(args):
         results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
         container[-1] += results
     print('-'*30)
-    head = '\t'.join(['FPR->'] + map(str, fprs_choosen)*3)   
+    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3)   
     head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
     write_table(head, container, output_path)
     print('All done. Exit')
@@ -195,7 +194,7 @@ def hocomoco_case(args):
             results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
             container[-1] += results
         print('-'*30)  
-    head = '\t'.join(['FPR->'] + map(str, fprs_choosen)*3)   
+    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3)   
     head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
     write_table(head, container, output_path)
     print('All done. Exit')
