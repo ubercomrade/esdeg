@@ -106,7 +106,7 @@ def fasta_parser(path):
     return container
 
 
-@njit
+@njit(cache=True)
 def actg_to_numbers(seq):
     length = len(seq)
     vec = np.zeros(length, dtype=np.int64)

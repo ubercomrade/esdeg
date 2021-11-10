@@ -52,7 +52,7 @@ def calculate_fpr(n):
         fpr = 0.0005
         for i in range(n):
             fpr = fpr / parameter
-            parameter = 1 + parameter / 2
+            parameter = 1 + parameter / 4 # old val = 2
         return(fpr)
 
     
@@ -83,7 +83,7 @@ def fisher_test(deg_scores, other_scores, threshold):
     return fisher_pval
 
 
-@njit
+@njit(cache=True)
 def calculate_enrichment(scores, threshold):
     counts = np.sum(np.greater_equal(scores, threshold))
     total = scores.shape[0] * scores.shape[1]
@@ -93,8 +93,8 @@ def calculate_enrichment(scores, threshold):
     return enrichment
 
 
-@njit
-def montecarlo(deg_scores, other_scores, threshold):
+@njit(cache=True)
+def montecarlo_enrichment(deg_scores, other_scores, threshold):
     real_enrichmnet = calculate_enrichment(deg_scores, threshold)
     number_of_deg = len(deg_scores)
     indexes = np.arange(len(other_scores))
@@ -105,6 +105,23 @@ def montecarlo(deg_scores, other_scores, threshold):
         vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
     z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
+    return z_score
+
+
+@njit(cache=True)
+def montecarlo_fraction(deg_scores, other_scores, threshold):
+    number_of_deg = len(deg_scores)
+    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
+    real_fraction = number_of_deg_with_tfbs / number_of_deg
+    indexes = np.arange(len(other_scores))
+    vec_random_fraction = np.zeros(1000, dtype=np.float64)
+    for i in range(1000):
+        sample_indexes = np.random.choice(indexes, number_of_deg)
+        sample = other_scores[sample_indexes]
+        number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
+        vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
+    random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
+    z_score = (real_fraction - random_fraction_mean) / random_fraction_std
     return z_score
 
 
@@ -127,9 +144,9 @@ def get_other_gene_ids(df, padj_thr=0.1):
     return gene_ids
 
 
-def write_table(data, path):
+def write_table(head, data, path):
     with open(path, 'w') as file:
-        file.write('\t'.join(['ID'] + ['ALL']*5 + ['UP']*5 + ['DOWN']*5) + '\n')
+        file.write(head)
         for line in data:
             file.write('\t'.join(map(str, line)) + '\n')
     pass

@@ -1,7 +1,6 @@
 import os
 import sys
 import argparse
-import matplotlib.pyplot as plt
 from scipy import stats
 from enrest.functions import *
 from enrest.parsers import matrix_parser, hocomoco_parser, fasta_parser
@@ -16,47 +15,49 @@ def parse_args():
     
     matrix.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     matrix.add_argument('matrix', action='store', help='path to matrix (PCM) in HOCOMOCO format')
-    matrix.add_argument('promoters', action='store', choices=['mm10', 'hg38'], metavar='N',
+    matrix.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10)')
     matrix.add_argument('output', action='store', help='path to write table with results')
     matrix.add_argument('-t', '--tag', action='store', type=str, dest='tag',
                         required=False, default='matrix', help='Used as name of matrix for first column in output, def=matrix')
-    matrix.add_argument('-m', '--method', action='store', choices=['montecarlo', 'fisher'],
-                        metavar='N', type=str, default='montecarlo', 
-                        help='Method to calculate statistics of enrichment (montecarlo or fisher), default= montecarlo')
+    matrix.add_argument('-m', '--method', action='store', choices=['enrichment', 'fraction'],
+                        metavar='N', type=str, default='enrichment', 
+                        help='Realisation of montecarlo approach (enrichment or fraction), default= enrichment')
     
     hocomoco.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     hocomoco.add_argument('db', action='store', help='Path HOCOMOCO DB')
     hocomoco.add_argument('promoters', action='store', choices=['mm10', 'hg38'], metavar='N',
          help='promoters of organism (hg38, mm10)')
-    hocomoco.add_argument('output', action='store', help='path to write table with results')
-    hocomoco.add_argument('-m', '--method', action='store', choices=['montecarlo', 'fisher'],
-                        metavar='N', type=str, default='montecarlo', 
-                        help='Method to calculate statistics of enrichment (montecarlo or fisher), default= montecarlo')   
-    
+    hocomoco.add_argument('output', action='store', help='path to write table with results')  
+    hocomoco.add_argument('-m', '--method', action='store', choices=['enrichment', 'fraction'],
+                        metavar='N', type=str, default='enrichment', 
+                        help='Realisation of montecarlo approach (enrichment or fraction), default= enrichment')
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     return(parser.parse_args())
 
 
-def run_montecarlo(deg_scores, other_scores, threshold_table):
+def run_montecarlo(deg_scores, other_scores, threshold_table, method):
     results_montecarlo = []
     for index in range(0, len(threshold_table)):
         threshold, fpr = threshold_table[index]
-        z_score = montecarlo(deg_scores, other_scores, threshold)
+        if method == "enrichment":
+            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+        elif method == "fraction":
+            z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
         pval = stats.norm.sf(abs(z_score))
         results_montecarlo.append(pval)
     return results_montecarlo
 
 
-def run_fisher(deg_scores, other_scores, threshold_table):
-    results_fisher = []
-    for index in range(0, len(threshold_table)):
-        threshold, fpr = threshold_table[index]
-        pval = fisher_test(deg_scores, other_scores, threshold)
-        results_fisher.append(pval)
-    return results_fisher
+#def run_fisher(deg_scores, other_scores, threshold_table):
+#    results_fisher = []
+#    for index in range(0, len(threshold_table)):
+#        threshold, fpr = threshold_table[index]
+#        pval = fisher_test(deg_scores, other_scores, threshold)
+#        results_fisher.append(pval)
+#    return results_fisher
 
 
 # def create_plot(results, wdir, tag, condition, method):
@@ -89,6 +90,8 @@ def matrix_case(args):
         path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
     elif promoters == 'hg38':
         path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+    elif promoters == 'rnor6':
+        path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
         
     print('-'*30)
     print('Read DEG table')
@@ -102,15 +105,15 @@ def matrix_case(args):
     matrix, matrix_length, middle_score = matrix_parser(path_to_matrix)
     print('-'*30)
     print('Scan promotrers')
-    scan_results = scaner(promoters, matrix)
-    best_results = get_best_scores(scan_results)
+    all_results = scaner(promoters, matrix)
+    best_results = get_best_scores(all_results)
     print('-'*30)
     print('Calculate threshold table')
-    all_scores_flatten = get_all_flatten_scores(scan_results)
+    all_scores_flatten = get_all_flatten_scores(all_results)
     threshold_table = get_threshold(all_scores_flatten)
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
-    fprs_choosen = [calculate_fpr(i) for i in range(5)]
+    fprs_choosen = [calculate_fpr(i) for i in range(9)]
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     print('-'*30)
@@ -121,18 +124,16 @@ def matrix_case(args):
         print(f'{index}. {condition} - condition')
         deg_ids = get_deg_gene_ids(deg_table, condition)
         other_ids = get_other_gene_ids(deg_table)
-        if method == 'montecarlo':
-            deg_scores, other_scores = split_scores_by_gene_ids(scan_results, deg_ids, other_ids)
-            results = run_montecarlo(deg_scores, other_scores, threshold_table)
-        elif method == 'fisher':
+        if method == "enrichment":
+            deg_scores, other_scores = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
+        elif method == "fraction":
             deg_scores, other_scores = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
-            results = run_fisher(deg_scores, other_scores, threshold_table)
-        else:
-            sys.stderr.write("I don't know that method, I exit, See You!\n")
-            sys.exit(0)
+        results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
         container[-1] += results
     print('-'*30)
-    write_table(container, output_path)
+    head = '\t'.join(['FPR->'] + map(str, fprs_choosen)*3)   
+    head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
+    write_table(head, container, output_path)
     print('All done. Exit')
     pass
 
@@ -149,6 +150,8 @@ def hocomoco_case(args):
         path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
     elif promoters == 'hg38':
         path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+    elif promoters == 'rnor6':
+        path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
         
     print('-'*30)
     print('Read DEG table')
@@ -169,14 +172,14 @@ def hocomoco_case(args):
         container.append([name])
         print(f'{i+1}. {name}:')
         print('Scan promotrers')
-        scan_results = scaner(promoters, matrix)
-        best_results = get_best_scores(scan_results)
+        all_results = scaner(promoters, matrix)
+        best_results = get_best_scores(all_results)
         print('Calculate threshold table')
-        all_scores_flatten = get_all_flatten_scores(scan_results)
+        all_scores_flatten = get_all_flatten_scores(all_results)
         threshold_table = get_threshold(all_scores_flatten)
         threshold_table = np.array(threshold_table)
         fprs_table = threshold_table[:,1]
-        fprs_choosen = [calculate_fpr(i) for i in range(5)]
+        fprs_choosen = [calculate_fpr(i) for i in range(9)]
         indexes = np.searchsorted(fprs_table, fprs_choosen)
         threshold_table = threshold_table[indexes]
         print('Run tests:')
@@ -184,18 +187,16 @@ def hocomoco_case(args):
             print(f'{index}. {condition} - condition')
             deg_ids = get_deg_gene_ids(deg_table, condition)
             other_ids = get_other_gene_ids(deg_table)
-            if method == 'montecarlo':
-                deg_scores, other_scores = split_scores_by_gene_ids(scan_results, deg_ids, other_ids)
-                results = run_montecarlo(deg_scores, other_scores, threshold_table)
-            elif method == 'fisher':
+            if method == "enrichment":
+                deg_scores, other_scores = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
+            elif method == "fraction":
                 deg_scores, other_scores = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
-                results = run_fisher(deg_scores, other_scores, threshold_table)
-            else:
-                sys.stderr.write("I don't know that method, I exit, See You!\n")
-                sys.exit(0)
+            results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
             container[-1] += results
-        print('-'*30)
-    write_table(container, output_path)
+        print('-'*30)  
+    head = '\t'.join(['FPR->'] + map(str, fprs_choosen)*3)   
+    head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
+    write_table(head, container, output_path)
     print('All done. Exit')
     pass
 
