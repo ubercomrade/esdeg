@@ -26,7 +26,7 @@ def parse_args():
     
     hocomoco.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     hocomoco.add_argument('db', action='store', help='Path HOCOMOCO DB')
-    hocomoco.add_argument('promoters', action='store', choices=['mm10', 'hg38'], metavar='N',
+    hocomoco.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10)')
     hocomoco.add_argument('output', action='store', help='path to write table with results')  
     hocomoco.add_argument('-m', '--method', action='store', choices=['enrichment', 'fraction'],
