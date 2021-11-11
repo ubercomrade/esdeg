@@ -131,7 +131,7 @@ def matrix_case(args):
         results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
         container[-1] += results
     print('-'*30)
-    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3)   
+    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3) + '\n' 
     head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
     write_table(head, container, output_path)
     print('All done. Exit')
