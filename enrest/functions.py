@@ -155,13 +155,13 @@ def calculate_enrichment(scores, threshold_min, threshold_max):
     return enrichment
 
 
-@njit(cache=True, fastmath=False, parallel=False)
+@njit(cache=True)
 def montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max):
     real_enrichmnet = calculate_enrichment(deg_scores, threshold_min, threshold_max)
     number_of_deg = len(deg_scores)
     indexes = np.arange(len(other_scores))
     vec_random_enrichment = np.zeros(1000)
-    for i in prange(1000):
+    for i in range(1000):
         sample_indexes = np.random.choice(indexes, number_of_deg)
         sample = other_scores[sample_indexes]
         vec_random_enrichment[i] = calculate_enrichment(sample, threshold_min, threshold_max)
@@ -170,7 +170,7 @@ def montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max
     return z_score
 
     
-@njit(cache=True, fastmath=False, parallel=False)
+@njit(cache=True)
 def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
     number_of_deg = len(deg_scores)
     number_of_deg_with_tfbs = np.sum(np.logical_and(np.greater_equal(deg_scores, threshold_min),
@@ -178,7 +178,7 @@ def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
     real_fraction = number_of_deg_with_tfbs / number_of_deg
     indexes = np.arange(len(other_scores))
     vec_random_fraction = np.zeros(1000, dtype=np.float64)
-    for i in prange(1000):
+    for i in range(1000):
         sample_indexes = np.random.choice(indexes, number_of_deg)
         sample = other_scores[sample_indexes]
         number_of_other_with_tfbs = np.sum(np.logical_and(np.greater_equal(sample, threshold_min),
