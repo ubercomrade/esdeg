@@ -66,7 +66,7 @@ def get_threshold(scores):
 
 def calculate_fprs(min_fpr, n=3):
     container = []
-    step = (np.log10(np.min(fprs_table)) - np.log10(0.0005)) / n
+    step = (np.log10(np.min(min_fpr)) - np.log10(0.0005)) / n
     for i in range(n):
         fpr = 10**(np.log10(0.0005) + (i*step))
         container.append(fpr)
@@ -187,8 +187,6 @@ def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
     return z_score
-
-
 
 
 def get_deg_gene_ids(df, cond, padj_thr=0.1):
