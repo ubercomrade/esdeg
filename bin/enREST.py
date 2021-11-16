@@ -37,15 +37,31 @@ def parse_args():
         sys.exit(1)
     return(parser.parse_args())
 
+#OLD
+# def run_montecarlo(deg_scores, other_scores, threshold_table, method):
+#     results_montecarlo = []
+#     for index in range(0, len(threshold_table)):
+#         threshold, fpr = threshold_table[index]
+#         if method == "enrichment":
+#             z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+#         elif method == "fraction":
+#             z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
+#         pval = stats.norm.sf(abs(z_score))
+#         results_montecarlo.append(pval)
+#     return results_montecarlo
 
+
+#NEW
 def run_montecarlo(deg_scores, other_scores, threshold_table, method):
     results_montecarlo = []
-    for index in range(0, len(threshold_table)):
+    for line1, line2 in pairwise(threshold_table):
+        threshold_min, fpr_min = line1
+        threshold_max, fpr_max = line2
         threshold, fpr = threshold_table[index]
         if method == "enrichment":
-            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max)
         elif method == "fraction":
-            z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
+            z_score = montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max)
         pval = stats.norm.sf(abs(z_score))
         results_montecarlo.append(pval)
     return results_montecarlo
@@ -113,7 +129,8 @@ def matrix_case(args):
     threshold_table = get_threshold(all_scores_flatten)
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
-    fprs_choosen = [calculate_fpr(i) for i in range(9)]
+    #fprs_choosen = [calculate_fpr(i) for i in range(9)] # old
+    fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     print('-'*30)
@@ -131,8 +148,10 @@ def matrix_case(args):
         results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
         container[-1] += results
     print('-'*30)
-    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3) + '\n' 
-    head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
+    # head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3) + '\n' # old
+    # head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n' # old
+    head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*3) + '\n' # new
+    head += '\t'.join(['ID'] + ['ALL']*4 + ['UP']*4 + ['DOWN']*4) + '\n' #new
     write_table(head, container, output_path)
     print('All done. Exit')
     pass
@@ -179,7 +198,8 @@ def hocomoco_case(args):
         threshold_table = get_threshold(all_scores_flatten)
         threshold_table = np.array(threshold_table)
         fprs_table = threshold_table[:,1]
-        fprs_choosen = [calculate_fpr(i) for i in range(9)]
+        #fprs_choosen = [calculate_fpr(i) for i in range(9)] # old
+        fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
         indexes = np.searchsorted(fprs_table, fprs_choosen)
         threshold_table = threshold_table[indexes]
         print('Run tests:')
@@ -194,8 +214,10 @@ def hocomoco_case(args):
             results = run_montecarlo(deg_scores, other_scores, threshold_table, method)
             container[-1] += results
         print('-'*30)  
-    head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3) + '\n'   
-    head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n'
+    # head = '\t'.join(['FPR->'] + list(map(str, fprs_choosen))*3) + '\n' # old
+    # head += '\t'.join(['ID'] + ['ALL']*9 + ['UP']*9 + ['DOWN']*9) + '\n' # old
+    head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*3) + '\n' # new
+    head += '\t'.join(['ID'] + ['ALL']*4 + ['UP']*4 + ['DOWN']*4) + '\n' #new
     write_table(head, container, output_path)
     print('All done. Exit')
     pass
