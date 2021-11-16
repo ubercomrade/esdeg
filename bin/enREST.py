@@ -63,6 +63,8 @@ def run_montecarlo(deg_scores, other_scores, threshold_table, method):
             z_score = montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max)
         pval = stats.norm.sf(abs(z_score))
         results_montecarlo.append(pval)
+        cpval = stats.combine_pvalues(results_montecarlo)
+        results_montecarlo.append(cpval)
     return results_montecarlo
 
 
