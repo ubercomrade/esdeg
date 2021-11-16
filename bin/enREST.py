@@ -57,7 +57,6 @@ def run_montecarlo(deg_scores, other_scores, threshold_table, method):
     for line1, line2 in pairwise(threshold_table):
         threshold_min, fpr_min = line1
         threshold_max, fpr_max = line2
-        threshold, fpr = threshold_table[index]
         if method == "enrichment":
             z_score = montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max)
         elif method == "fraction":
