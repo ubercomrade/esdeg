@@ -176,6 +176,8 @@ def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
     number_of_deg_with_tfbs = np.sum(np.logical_and(np.greater_equal(deg_scores, threshold_min),
                                                    np.less(deg_scores, threshold_max)))
     real_fraction = number_of_deg_with_tfbs / number_of_deg
+    if real_fraction == 0:
+        real_fraction = 10**(-6)
     indexes = np.arange(len(other_scores))
     vec_random_fraction = np.zeros(1000, dtype=np.float64)
     for i in range(1000):
@@ -185,6 +187,8 @@ def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
                                                    np.less(sample, threshold_max)))
         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
+    if random_fraction_mean == 0:
+        random_fraction_mean = 10**(-6)
     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
     return z_score
 
