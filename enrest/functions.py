@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.stats import norm, chi2
 from numba import njit, float64, int64
 from itertools import tee
 
@@ -101,53 +102,9 @@ def fisher_test(deg_scores, other_scores, threshold):
     return fisher_pval
 
 
-# @njit(cache=True)
-# def calculate_enrichment(scores, threshold):
-#     counts = np.sum(np.greater_equal(scores, threshold))
-#     total = scores.shape[0] * scores.shape[1]
-#     enrichment = counts / total
-#     if enrichment == 0:
-#         enrichment = 10**(-6)
-#     return enrichment
-
-
-# @njit(cache=True)
-# def montecarlo_enrichment(deg_scores, other_scores, threshold):
-#     real_enrichmnet = calculate_enrichment(deg_scores, threshold)
-#     number_of_deg = len(deg_scores)
-#     indexes = np.arange(len(other_scores))
-#     vec_random_enrichment = np.zeros(1000)
-#     for i in range(1000):
-#         sample_indexes = np.random.choice(indexes, number_of_deg)
-#         sample = other_scores[sample_indexes]
-#         vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
-#     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
-#     z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
-#     return z_score
-
-
-# @njit(cache=True)
-# def montecarlo_fraction(deg_scores, other_scores, threshold):
-#     number_of_deg = len(deg_scores)
-#     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-#     real_fraction = number_of_deg_with_tfbs / number_of_deg
-#     indexes = np.arange(len(other_scores))
-#     vec_random_fraction = np.zeros(1000, dtype=np.float64)
-#     for i in range(1000):
-#         sample_indexes = np.random.choice(indexes, number_of_deg)
-#         sample = other_scores[sample_indexes]
-#         number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
-#         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
-#     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-#     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
-#     return z_score
-
-
-
-@njit(fastmath=True)
-def calculate_enrichment(scores, threshold_min, threshold_max):
-    counts = np.sum(np.logical_and(np.greater_equal(scores, threshold_min),
-                                   np.less(scores, threshold_max)))
+@njit(cache=True)
+def calculate_enrichment(scores, threshold):
+    counts = np.sum(np.greater_equal(scores, threshold))
     total = scores.shape[0] * scores.shape[1]
     enrichment = counts / total
     if enrichment == 0:
@@ -156,41 +113,104 @@ def calculate_enrichment(scores, threshold_min, threshold_max):
 
 
 @njit(cache=True)
-def montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max):
-    real_enrichmnet = calculate_enrichment(deg_scores, threshold_min, threshold_max)
+def montecarlo_enrichment(deg_scores, other_scores, threshold):
+    real_enrichmnet = calculate_enrichment(deg_scores, threshold)
     number_of_deg = len(deg_scores)
     indexes = np.arange(len(other_scores))
     vec_random_enrichment = np.zeros(1000)
     for i in range(1000):
         sample_indexes = np.random.choice(indexes, number_of_deg)
         sample = other_scores[sample_indexes]
-        vec_random_enrichment[i] = calculate_enrichment(sample, threshold_min, threshold_max)
+        vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
     z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
     return z_score
 
-    
+
 @njit(cache=True)
-def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
+def montecarlo_fraction(deg_scores, other_scores, threshold):
     number_of_deg = len(deg_scores)
-    number_of_deg_with_tfbs = np.sum(np.logical_and(np.greater_equal(deg_scores, threshold_min),
-                                                   np.less(deg_scores, threshold_max)))
+    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
     real_fraction = number_of_deg_with_tfbs / number_of_deg
-    if real_fraction == 0:
-        real_fraction = 10**(-6)
     indexes = np.arange(len(other_scores))
     vec_random_fraction = np.zeros(1000, dtype=np.float64)
     for i in range(1000):
         sample_indexes = np.random.choice(indexes, number_of_deg)
         sample = other_scores[sample_indexes]
-        number_of_other_with_tfbs = np.sum(np.logical_and(np.greater_equal(sample, threshold_min),
-                                                   np.less(sample, threshold_max)))
+        number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-    if random_fraction_mean == 0:
-        random_fraction_mean = 10**(-6)
     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
     return z_score
+
+
+
+# @njit(fastmath=True)
+# def calculate_enrichment(scores, threshold_min, threshold_max):
+#     counts = np.sum(np.logical_and(np.greater_equal(scores, threshold_min),
+#                                    np.less(scores, threshold_max)))
+#     total = scores.shape[0] * scores.shape[1]
+#     enrichment = counts / total
+#     if enrichment == 0:
+#         enrichment = 10**(-6)
+#     return enrichment
+
+
+# @njit(cache=True)
+# def montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max):
+#     real_enrichmnet = calculate_enrichment(deg_scores, threshold_min, threshold_max)
+#     number_of_deg = len(deg_scores)
+#     indexes = np.arange(len(other_scores))
+#     vec_random_enrichment = np.zeros(1000)
+#     for i in range(1000):
+#         sample_indexes = np.random.choice(indexes, number_of_deg)
+#         sample = other_scores[sample_indexes]
+#         vec_random_enrichment[i] = calculate_enrichment(sample, threshold_min, threshold_max)
+#     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
+#     z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
+#     return z_score
+
+    
+# @njit(cache=True)
+# def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
+#     number_of_deg = len(deg_scores)
+#     number_of_deg_with_tfbs = np.sum(np.logical_and(np.greater_equal(deg_scores, threshold_min),
+#                                                    np.less(deg_scores, threshold_max)))
+#     real_fraction = number_of_deg_with_tfbs / number_of_deg
+#     if real_fraction == 0:
+#         real_fraction = 10**(-6)
+#     indexes = np.arange(len(other_scores))
+#     vec_random_fraction = np.zeros(1000, dtype=np.float64)
+#     for i in range(1000):
+#         sample_indexes = np.random.choice(indexes, number_of_deg)
+#         sample = other_scores[sample_indexes]
+#         number_of_other_with_tfbs = np.sum(np.logical_and(np.greater_equal(sample, threshold_min),
+#                                                    np.less(sample, threshold_max)))
+#         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
+#     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
+#     if random_fraction_mean == 0:
+#         random_fraction_mean = 10**(-6)
+#     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
+#     return z_score
+
+
+def hartung(p):
+
+    '''
+     Hartung, J. (1999): "A note on combining dependent tests of significance",
+                         Biometrical Journal, 41(7), 849--855.
+    '''
+    L = np.ones(len(p), dtype=float) # zeros weight
+    t = norm.ppf(p)
+    n = float(len(p))
+    avt = np.sum(t)/n
+    q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
+    rhohat = 1 - q
+    rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
+    kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
+    Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
+    pvalue=norm.cdf(Ht)
+    return pvalue
 
 
 def get_deg_gene_ids(df, cond, padj_thr=0.1):

@@ -37,37 +37,40 @@ def parse_args():
         sys.exit(1)
     return(parser.parse_args())
 
+
 #OLD
-# def run_montecarlo(deg_scores, other_scores, threshold_table, method):
-#     results_montecarlo = []
-#     for index in range(0, len(threshold_table)):
-#         threshold, fpr = threshold_table[index]
-#         if method == "enrichment":
-#             z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
-#         elif method == "fraction":
-#             z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
-#         pval = stats.norm.sf(abs(z_score))
-#         results_montecarlo.append(pval)
-#     return results_montecarlo
-
-
-#NEW
 def run_montecarlo(deg_scores, other_scores, threshold_table, method):
     results_montecarlo = []
-    for line1, line2 in pairwise(threshold_table):
-        threshold_min, fpr_min = line1
-        threshold_max, fpr_max = line2
+    for index in range(0, len(threshold_table)):
+        threshold, fpr = threshold_table[index]
         if method == "enrichment":
-            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max)
+            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
         elif method == "fraction":
-            z_score = montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max)
+            z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
         pval = stats.norm.sf(abs(z_score))
         results_montecarlo.append(pval)
-    st, cpval = stats.combine_pvalues(results_montecarlo)
+    cpval = hartung(np.array(results_montecarlo))
     results_montecarlo.append(cpval)
     return results_montecarlo
 
 
+#NEW
+# def run_montecarlo(deg_scores, other_scores, threshold_table, method):
+#     results_montecarlo = []
+#     for line1, line2 in pairwise(threshold_table):
+#         threshold_min, fpr_min = line1
+#         threshold_max, fpr_max = line2
+#         if method == "enrichment":
+#             z_score = montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max)
+#         elif method == "fraction":
+#             z_score = montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max)
+#         pval = stats.norm.sf(abs(z_score))
+#         results_montecarlo.append(pval)
+#     st, cpval = stats.combine_pvalues(results_montecarlo)
+#     results_montecarlo.append(cpval)
+#     return results_montecarlo
+
+# FISHER APPROACH
 #def run_fisher(deg_scores, other_scores, threshold_table):
 #    results_fisher = []
 #    for index in range(0, len(threshold_table)):
@@ -76,7 +79,7 @@ def run_montecarlo(deg_scores, other_scores, threshold_table, method):
 #        results_fisher.append(pval)
 #    return results_fisher
 
-
+# PLOT
 # def create_plot(results, wdir, tag, condition, method):
 #     fpr = [i[0] for i in results]
 #     pvals = [i[1] for i in results]
@@ -130,8 +133,9 @@ def matrix_case(args):
     threshold_table = get_threshold(all_scores_flatten)
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
+    fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
     #fprs_choosen = [calculate_fpr(i) for i in range(9)] # old
-    fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
+    #fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     print('-'*30)
@@ -199,8 +203,9 @@ def hocomoco_case(args):
         threshold_table = get_threshold(all_scores_flatten)
         threshold_table = np.array(threshold_table)
         fprs_table = threshold_table[:,1]
+        fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
         #fprs_choosen = [calculate_fpr(i) for i in range(9)] # old
-        fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
+        #fprs_choosen = calculate_fprs(np.min(fprs_table), n=3) # new
         indexes = np.searchsorted(fprs_table, fprs_choosen)
         threshold_table = threshold_table[indexes]
         print('Run tests:')
