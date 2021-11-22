@@ -138,7 +138,7 @@ def matrix_case(args):
     print('-'*30)
     print('Run tests:')
     container = []
-    container.append(matrix_name)
+    container.append([matrix_name])
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         print(f'{index}. {condition} - condition')
         deg_ids = get_deg_gene_ids(deg_table, condition)
