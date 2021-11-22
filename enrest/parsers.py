@@ -10,6 +10,7 @@ def read_matrix(path, pos):
         for line in file:
             if line.startswith(">"):
                 matrix_name = line.strip()[1:]
+                continue
             line = [float(i) for i in line.strip().split('\t')[pos:]]
             matrix.append(line)
     if matrix_name == "":
