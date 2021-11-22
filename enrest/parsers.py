@@ -5,12 +5,16 @@ from numba import njit
 ### MATRIX PART ###
 def read_matrix(path, pos):
     matrix = []
+    matrix_name = ""
     with open(path) as file:
-        file.readline()
         for line in file:
+            if line.startswith(">"):
+                matrix_name = line.strip()[1:]
             line = [float(i) for i in line.strip().split('\t')[pos:]]
             matrix.append(line)
-    return np.array(matrix).T
+    if matrix_name == "":
+        matrix_name = "matrix"
+    return matrix_name, np.array(matrix).T
 
 
 def read_matrix_list(path):
@@ -65,12 +69,12 @@ def to_score(matrix, norm_value):
     
     
 def matrix_parser(path):
-    matrix = read_matrix(path, 0)
+    matrix_name, matrix = read_matrix(path, 0)
     matrix = pcm_to_pfm(matrix)
     matrix = pfm_to_pwm(matrix)
     matrix_length = matrix.shape[1]
     middle_score = to_score(matrix, 0.6)
-    return matrix, matrix_length, middle_score
+    return matrix_name, matrix, matrix_length, middle_score
 
 
 def hocomoco_parser(path):

@@ -18,8 +18,6 @@ def parse_args():
     matrix.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10)')
     matrix.add_argument('output', action='store', help='path to write table with results')
-    matrix.add_argument('-t', '--tag', action='store', type=str, dest='tag',
-                        required=False, default='matrix', help='Used as name of matrix for first column in output, def=matrix')
     matrix.add_argument('-m', '--method', action='store', choices=['enrichment', 'fraction'],
                         metavar='N', type=str, default='enrichment', 
                         help='Realisation of montecarlo approach (enrichment or fraction), default= enrichment')
@@ -103,7 +101,6 @@ def matrix_case(args):
     output_path = args.output
     promoters = args.promoters
     method = args.method
-    tag = args.tag
     
     this_dir, this_filename = os.path.split(__file__)
     if promoters == 'mm10':
@@ -115,14 +112,14 @@ def matrix_case(args):
         
     print('-'*30)
     print('Read DEG table')
-    deg_table = pd.read_csv(path_to_deg, sep='\t', comment='#')
+    deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
     deg_table = deg_table[deg_table['padj'] <= 1]
     print('-'*30)
     print('Read promoters')
     promoters = fasta_parser(path_to_promoters)
     print('-'*30)
     print('Read PWM')
-    matrix, matrix_length, middle_score = matrix_parser(path_to_matrix)
+    matrix_name, matrix, matrix_length, middle_score = matrix_parser(path_to_matrix)
     print('-'*30)
     print('Scan promotrers')
     all_results = scaner(promoters, matrix)
@@ -141,7 +138,7 @@ def matrix_case(args):
     print('-'*30)
     print('Run tests:')
     container = []
-    container.append([tag])
+    container.append(matrix_name)
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         print(f'{index}. {condition} - condition')
         deg_ids = get_deg_gene_ids(deg_table, condition)
@@ -179,7 +176,7 @@ def hocomoco_case(args):
         
     print('-'*30)
     print('Read DEG table')
-    deg_table = pd.read_csv(path_to_deg, sep='\t', comment='#')
+    deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
     deg_table = deg_table[deg_table['padj'] <= 1]
     print('-'*30)
     print('Read promoters')

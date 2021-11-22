@@ -5,7 +5,7 @@ from setuptools import setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy', 'matplotlib']
+install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy']
 
 
 setup(

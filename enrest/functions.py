@@ -221,14 +221,14 @@ def get_deg_gene_ids(df, cond, padj_thr=0.1):
     elif cond == 'UP':
         df = df[df['log2FoldChange'] >= 1]
     df = df[df['padj'] <= padj_thr]
-    gene_ids = [i for i in df['geneName'] if isinstance(i, str)]
+    gene_ids = [i for i in df['id'] if isinstance(i, str)]
     return gene_ids
 
 
 def get_other_gene_ids(df, padj_thr=0.1):
     df = df[np.logical_and(df['log2FoldChange'] >= np.log2(4/5), df['log2FoldChange'] <= np.log2(5/4))]
     df = df[df['padj'] > padj_thr]
-    gene_ids = [i for i in df['geneName'] if isinstance(i, str)]
+    gene_ids = [i for i in df['id'] if isinstance(i, str)]
     return gene_ids
 
 
