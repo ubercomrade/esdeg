@@ -17,9 +17,9 @@ def parse_args():
     parser.add_argument('-m', '--method', action='store', choices=['montecarlo', 'binom', 'hypergeom'],
                         metavar='METHOD', type=str, default='enrichment', 
                         help='Realisation of montecarlo approach (enrichment or fraction), default= enrichment')
-    parser.add_argument('-p', '--parametr', action='store', choices=['enrichment', 'fraction'],
-                        metavar='METHOD', type=str, default='enrichment', 
-                        help='Parametr to test (enrichment or fraction), default= enrichment')
+    parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
+                        metavar='PARAMETER', type=str, default='enrichment', 
+                        help='Parameter to test (enrichment or fraction), default= enrichment')
     parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
@@ -36,20 +36,20 @@ def parse_args():
 
 
 #OLD
-def run_test(deg_scores, other_scores, threshold_table, method, parametr):
+def run_test(deg_scores, other_scores, threshold_table, method, parameter):
     results = []
     for index in range(0, len(threshold_table)):
         threshold, fpr = threshold_table[index]
         if method == 'montecarlo':
-            if parametr == "enrichment":
+            if parameter == "enrichment":
                 z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
-            elif parametr == "fraction":
+            elif parameter == "fraction":
                 z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
             pval = stats.norm.sf(abs(z_score))
         else:
-            if parametr == "enrichment":
+            if parameter == "enrichment":
                 pval = stat_tests_enrichment(deg_scores, other_scores, threshold, method=method)
-            elif parametr == "fraction":
+            elif parameter == "fraction":
                 pval = stat_tests_fraction(deg_scores, other_scores, threshold, method=method)            
         results.append(pval)
     cpval = hartung(np.array(results))
@@ -80,7 +80,7 @@ def main():
     path_to_db = args.db
     output_path = args.output
     promoters = args.promoters
-    parametr = args.parametr
+    parameter = args.parameter
     method = args.method
     file_format = args.format
     padj_thr= args.pvalue
@@ -129,11 +129,11 @@ def main():
             print(f'{index}. {condition} - condition')
             deg_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
             other_ids = get_other_gene_ids(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
-            if parametr == "enrichment":
+            if parameter == "enrichment":
                 deg_scores, other_scores = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
-            elif parametr == "fraction":
+            elif parameter == "fraction":
                 deg_scores, other_scores = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
-            results = run_test(deg_scores, other_scores, threshold_table, method, parametr)
+            results = run_test(deg_scores, other_scores, threshold_table, method, parameter)
             container[-1] += results
         print('-'*30)  
     head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*3) + '\n' # new
