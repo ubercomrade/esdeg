@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('output', action='store', help='path to write table with results')
     parser.add_argument('-m', '--method', action='store', choices=['montecarlo', 'binom', 'hypergeom'],
                         metavar='METHOD', type=str, default='enrichment', 
-                        help='Realisation of montecarlo approach (enrichment or fraction), default= enrichment')
+                        help='Method for calculating statistics (montecarlo, binom or hypergeom), default= montecarlo')
     parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
                         help='Parameter to test (enrichment or fraction), default= enrichment')
