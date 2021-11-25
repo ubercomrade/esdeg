@@ -77,7 +77,7 @@ def run_test(deg_scores, other_scores, threshold_table, method, parameter):
 def main():
     args = parse_args()
     path_to_deg = args.deg
-    path_to_db = args.db
+    path_to_db = args.matrices
     output_path = args.output
     promoters = args.promoters
     parameter = args.parameter
