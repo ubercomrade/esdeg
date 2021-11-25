@@ -74,7 +74,7 @@ def run_test(deg_scores, other_scores, threshold_table, method, parametr):
 #     return results_montecarlo
     
     
-def main(args):
+def main():
     args = parse_args()
     path_to_deg = args.deg
     path_to_db = args.db
