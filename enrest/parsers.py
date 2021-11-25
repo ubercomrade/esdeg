@@ -1,24 +1,10 @@
 import numpy as np
 from numba import njit
+from operator import itemgetter
 
 
 ### MATRIX PART ###
-def read_matrix(path, pos):
-    matrix = []
-    matrix_name = ""
-    with open(path) as file:
-        for line in file:
-            if line.startswith(">"):
-                matrix_name = line.strip()[1:]
-                continue
-            line = [float(i) for i in line.strip().split('\t')[pos:]]
-            matrix.append(line)
-    if matrix_name == "":
-        matrix_name = "matrix"
-    return matrix_name, np.array(matrix).T
-
-
-def read_matrix_list(path):
+def read_list_of_matrix_hocomoco(path):
     container = []
     matrix = []
     with open(path) as file:
@@ -32,6 +18,27 @@ def read_matrix_list(path):
                 line = [float(i) for i in line.strip().split('\t')]
                 matrix.append(line)
     container.append((matrix_name, np.array(matrix).T))
+    return container
+
+
+def read_list_of_matrix_meme(path):
+    container = []
+    matrix = []
+    with open(path) as file:
+        for line in file:
+            if line.startswith("MOTIF"):
+                matrix_name = line.split()[1]
+                for line in file:
+                    if line.strip() != "":
+                        length, nsites = map(int, itemgetter(*[5,7])(line.strip().split()))
+                        break
+                for index, line in enumerate(file):
+                    line = [float(i) * nsites for i in line.strip().split('\t')]
+                    matrix.append(line)
+                    if index == length - 1:
+                        container.append((matrix_name, np.array(matrix).T))
+                        matrix = []
+                        break
     return container
 
 
@@ -67,20 +74,19 @@ def to_score(matrix, norm_value):
         max_s = max_score(matrix) 
         score = norm_value * (max_s - min_s) + min_s
         return score
-    
-    
-def matrix_parser(path):
-    matrix_name, matrix = read_matrix(path, 0)
-    matrix = pcm_to_pfm(matrix)
-    matrix = pfm_to_pwm(matrix)
-    matrix_length = matrix.shape[1]
-    middle_score = to_score(matrix, 0.6)
-    return matrix_name, matrix, matrix_length, middle_score
 
 
-def hocomoco_parser(path):
+def matrices_parser(path, f="meme"):
     container = []
-    matrices = read_matrix_list(path)
+    try:
+        if f == "meme":
+            matrices = read_list_of_matrix_meme(path)
+        elif f == "hocomoco":
+            matrices = read_list_of_matrix_hocomoco(path)
+        else:
+            sys.exit("Wrong format file")
+    except:
+        sys.exit("Can't read file with matrices")
     for index in range(len(matrices)):
         name, matrix = matrices[index]
         matrix = pcm_to_pfm(matrix)

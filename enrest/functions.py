@@ -87,7 +87,6 @@ def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
             other_scores.append(score)
         else:
             continue
-    #print(set(deg_ids) - set(exist))
     return np.array(deg_scores), np.array(other_scores)
 
 
@@ -112,6 +111,7 @@ def calculate_enrichment(scores, threshold):
     return enrichment
 
 
+# MONTECARLO APPROACH
 @njit(cache=True)
 def montecarlo_enrichment(deg_scores, other_scores, threshold):
     real_enrichmnet = calculate_enrichment(deg_scores, threshold)
@@ -144,7 +144,53 @@ def montecarlo_fraction(deg_scores, other_scores, threshold):
     return z_score
 
 
+# BINOMTEST APPROACH
+def stat_tests_enrichment(deg_scores, other_scores, threshold, method='binom'):
+    number_of_sites_upper_score_in_deg = np.sum(np.greater_equal(deg_scores, threshold))
+    total_namber_of_sites_in_deg = deg_scores.shape[0] * deg_scores.shape[1]
+    number_of_sites_upper_score_in_other = np.sum(np.greater_equal(other_scores, threshold))
+    total_namber_of_sites_in_other = other_scores.shape[0] * other_scores.shape[1]
+    prob = number_of_sites_upper_score_in_other / total_namber_of_sites_in_other
+    # print(total_namber_of_sites_in_deg, number_of_sites_upper_score_in_deg,
+    #      total_namber_of_sites_in_other, number_of_sites_upper_score_in_other)
+    if method == 'binom':
+        res = st.binomtest(number_of_sites_upper_score_in_deg,
+                           total_namber_of_sites_in_deg,
+                           p=prob)
+        pvalue = res.pvalue
+    elif method == 'hypergeom':
+        pvalue = st.hypergeom.sf(number_of_sites_upper_score_in_deg,
+                                  total_namber_of_sites_in_other,
+                                  number_of_sites_upper_score_in_other,
+                                  total_namber_of_sites_in_deg)
+    else:
+        sys.exit("Wrong method! Goodby!")
+    return pvalue
 
+
+def stat_tests_fraction(deg_scores, other_scores, threshold, method='binom'):
+    number_of_deg = len(deg_scores)
+    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
+    number_of_other = len(other_scores)
+    number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
+    prob = number_of_other_with_tfbs / number_of_other
+    #print(number_of_deg, number_of_deg_with_tfbs, number_of_other, number_of_other_with_tfbs)
+    if method == 'binom':
+        res = st.binomtest(number_of_deg_with_tfbs,
+                           number_of_deg,
+                           p=prob)
+        pvalue = res.pvalue
+    elif method == 'hypergeom':
+        pvalue = st.hypergeom.sf(number_of_deg_with_tfbs,
+                                  number_of_other,
+                                  number_of_other_with_tfbs,
+                                  number_of_deg)
+    else:
+        sys.exit("Wrong method! Goodby!")
+    return pvalue
+ 
+
+#ANOTHER MONTECARLO APPROACH
 # @njit(fastmath=True)
 # def calculate_enrichment(scores, threshold_min, threshold_max):
 #     counts = np.sum(np.logical_and(np.greater_equal(scores, threshold_min),
@@ -195,7 +241,6 @@ def montecarlo_fraction(deg_scores, other_scores, threshold):
 
 
 def hartung(p):
-
     '''
      Hartung, J. (1999): "A note on combining dependent tests of significance",
                          Biometrical Journal, 41(7), 849--855.
@@ -213,20 +258,22 @@ def hartung(p):
     return pvalue
 
 
-def get_deg_gene_ids(df, cond, padj_thr=0.1):
+def get_deg_gene_ids(df, cond, padj_thr=0.05, log2fc_thr=1):
+    log2fc_thr = abs(log2fc_thr)
     if cond == 'ALL':
-        df = df[np.logical_or(df['log2FoldChange'] <= -1, df['log2FoldChange'] >= 1)]
+        df = df[np.logical_or(df['log2FoldChange'] <= -log2fc_thr, df['log2FoldChange'] >= log2fc_thr)]
     elif cond == 'DOWN':
-        df = df[df['log2FoldChange'] <= -1]
+        df = df[df['log2FoldChange'] <= -log2fc_thr]
     elif cond == 'UP':
-        df = df[df['log2FoldChange'] >= 1]
+        df = df[df['log2FoldChange'] >= log2fc_thr]
     df = df[df['padj'] <= padj_thr]
     gene_ids = [i for i in df['id'] if isinstance(i, str)]
     return gene_ids
 
 
-def get_other_gene_ids(df, padj_thr=0.1):
-    df = df[np.logical_and(df['log2FoldChange'] >= np.log2(4/5), df['log2FoldChange'] <= np.log2(5/4))]
+def get_other_gene_ids(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
+    log2fc_thr = abs(log2fc_thr)
+    df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
     df = df[df['padj'] > padj_thr]
     gene_ids = [i for i in df['id'] if isinstance(i, str)]
     return gene_ids
