@@ -169,15 +169,17 @@ The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choos
 
 #### Example run
 
-Bash script and example data are located in `./example/example_run.sh` . You should run this script in `./example` directory.
+Bash script with examples and data are located in `./example/example_run.sh` . You should run this script in `./example` directory.
 
 ```
-enREST.py matrix \
-./E-GEOD-48230-query-results.tsv \
+enREST.py \
+./E-GEOD-48230-query-results.csv \
 ./OVOL1_HUMAN.H11MO.0.C.pcm \
 hg38 \
-./ovol1.enrichment.tsv \
--m enrichment
+./ovol1.montecarlo.enrichment.tsv \
+--method montecarlo \
+--parameter enrichment \
+--format hocomoco
 ```
 
 ## Output file format
