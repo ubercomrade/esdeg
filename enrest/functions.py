@@ -176,12 +176,12 @@ def stat_tests_fraction(deg_scores, other_scores, threshold, method='binom'):
     prob = number_of_other_with_tfbs / number_of_other
     #print(number_of_deg, number_of_deg_with_tfbs, number_of_other, number_of_other_with_tfbs)
     if method == 'binom':
-        res = st.binomtest(number_of_deg_with_tfbs,
+        res = stats.binomtest(number_of_deg_with_tfbs,
                            number_of_deg,
                            p=prob)
         pvalue = res.pvalue
     elif method == 'hypergeom':
-        pvalue = st.hypergeom.sf(number_of_deg_with_tfbs,
+        pvalue = stats.hypergeom.sf(number_of_deg_with_tfbs,
                                   number_of_other,
                                   number_of_other_with_tfbs,
                                   number_of_deg)
