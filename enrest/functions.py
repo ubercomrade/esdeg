@@ -154,12 +154,12 @@ def stat_tests_enrichment(deg_scores, other_scores, threshold, method='binom'):
     # print(total_namber_of_sites_in_deg, number_of_sites_upper_score_in_deg,
     #      total_namber_of_sites_in_other, number_of_sites_upper_score_in_other)
     if method == 'binom':
-        res = st.binomtest(number_of_sites_upper_score_in_deg,
+        res = stats.binomtest(number_of_sites_upper_score_in_deg,
                            total_namber_of_sites_in_deg,
                            p=prob)
         pvalue = res.pvalue
     elif method == 'hypergeom':
-        pvalue = st.hypergeom.sf(number_of_sites_upper_score_in_deg,
+        pvalue = stats.hypergeom.sf(number_of_sites_upper_score_in_deg,
                                   total_namber_of_sites_in_other,
                                   number_of_sites_upper_score_in_other,
                                   total_namber_of_sites_in_deg)
