@@ -3,7 +3,7 @@ import sys
 import argparse
 from scipy import stats
 from enrest.functions import *
-from enrest.parsers import matrix_parser, matrices_parser, fasta_parser
+from enrest.parsers import matrices_parser, fasta_parser
 from enrest.scaner import scaner
 
 
