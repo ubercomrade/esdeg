@@ -16,3 +16,21 @@ hg38 \
 ./ovol1.montecarlo.fraction.tsv \
 --parameter fraction \
 --format hocomoco
+
+
+enREST.py set \
+./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
+./NFKB1_HUMAN.H11MO.1.B.pcm \
+hg38 \
+./ovol1.montecarlo.enrichment.tsv \
+--parameter enrichment \
+--format hocomoco
+
+
+enREST.py set \
+./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
+./NFKB1_HUMAN.H11MO.1.B.pcm \
+hg38 \
+./ovol1.montecarlo.fraction.tsv \
+--parameter fraction \
+--format hocomoco
