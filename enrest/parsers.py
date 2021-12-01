@@ -137,3 +137,12 @@ def actg_to_numbers(seq):
     
 def complement(seq):
     return seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper()[::-1]
+
+
+### SET GENES ###
+def read_set_of_genes(path):
+    container = []
+    with open(path) as file:
+        for line in file:
+            container.append(line.strip())
+    return set(container)

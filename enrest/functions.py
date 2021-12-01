@@ -90,15 +90,15 @@ def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
     return np.array(deg_scores), np.array(other_scores)
 
 
-def fisher_test(deg_scores, other_scores, threshold):
-    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-    number_of_deg_without_tfbs = len(deg_scores) - number_of_deg_with_tfbs
-    number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
-    number_of_other_without_tfbs = len(other_scores) - number_of_other_with_tfbs
-    table = [[number_of_deg_with_tfbs, number_of_other_with_tfbs],
-        [number_of_deg_without_tfbs, number_of_other_without_tfbs]]
-    oddsr, fisher_pval = stats.fisher_exact(table, alternative='two-sided') # {‘two-sided’, ‘less’, ‘greater’}
-    return fisher_pval
+# def fisher_test(deg_scores, other_scores, threshold):
+#     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
+#     number_of_deg_without_tfbs = len(deg_scores) - number_of_deg_with_tfbs
+#     number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
+#     number_of_other_without_tfbs = len(other_scores) - number_of_other_with_tfbs
+#     table = [[number_of_deg_with_tfbs, number_of_other_with_tfbs],
+#         [number_of_deg_without_tfbs, number_of_other_without_tfbs]]
+#     oddsr, fisher_pval = stats.fisher_exact(table, alternative='two-sided') # {‘two-sided’, ‘less’, ‘greater’}
+#     return fisher_pval
 
 
 @njit(cache=True)
@@ -145,49 +145,49 @@ def montecarlo_fraction(deg_scores, other_scores, threshold):
 
 
 # BINOMTEST APPROACH
-def stat_tests_enrichment(deg_scores, other_scores, threshold, method='binom'):
-    number_of_sites_upper_score_in_deg = np.sum(np.greater_equal(deg_scores, threshold))
-    total_namber_of_sites_in_deg = deg_scores.shape[0] * deg_scores.shape[1]
-    number_of_sites_upper_score_in_other = np.sum(np.greater_equal(other_scores, threshold))
-    total_namber_of_sites_in_other = other_scores.shape[0] * other_scores.shape[1]
-    prob = number_of_sites_upper_score_in_other / total_namber_of_sites_in_other
-    # print(total_namber_of_sites_in_deg, number_of_sites_upper_score_in_deg,
-    #      total_namber_of_sites_in_other, number_of_sites_upper_score_in_other)
-    if method == 'binom':
-        res = stats.binomtest(number_of_sites_upper_score_in_deg,
-                           total_namber_of_sites_in_deg,
-                           p=prob)
-        pvalue = res.pvalue
-    elif method == 'hypergeom':
-        pvalue = stats.hypergeom.sf(number_of_sites_upper_score_in_deg,
-                                  total_namber_of_sites_in_other,
-                                  number_of_sites_upper_score_in_other,
-                                  total_namber_of_sites_in_deg)
-    else:
-        sys.exit("Wrong method! Goodby!")
-    return pvalue
+# def stat_tests_enrichment(deg_scores, other_scores, threshold, method='binom'):
+#     number_of_sites_upper_score_in_deg = np.sum(np.greater_equal(deg_scores, threshold))
+#     total_namber_of_sites_in_deg = deg_scores.shape[0] * deg_scores.shape[1]
+#     number_of_sites_upper_score_in_other = np.sum(np.greater_equal(other_scores, threshold))
+#     total_namber_of_sites_in_other = other_scores.shape[0] * other_scores.shape[1]
+#     prob = number_of_sites_upper_score_in_other / total_namber_of_sites_in_other
+#     # print(total_namber_of_sites_in_deg, number_of_sites_upper_score_in_deg,
+#     #      total_namber_of_sites_in_other, number_of_sites_upper_score_in_other)
+#     if method == 'binom':
+#         res = stats.binomtest(number_of_sites_upper_score_in_deg,
+#                            total_namber_of_sites_in_deg,
+#                            p=prob)
+#         pvalue = res.pvalue
+#     elif method == 'hypergeom':
+#         pvalue = stats.hypergeom.sf(number_of_sites_upper_score_in_deg,
+#                                   total_namber_of_sites_in_other,
+#                                   number_of_sites_upper_score_in_other,
+#                                   total_namber_of_sites_in_deg)
+#     else:
+#         sys.exit("Wrong method! Goodby!")
+#     return pvalue
 
 
-def stat_tests_fraction(deg_scores, other_scores, threshold, method='binom'):
-    number_of_deg = len(deg_scores)
-    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-    number_of_other = len(other_scores)
-    number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
-    prob = number_of_other_with_tfbs / number_of_other
-    #print(number_of_deg, number_of_deg_with_tfbs, number_of_other, number_of_other_with_tfbs)
-    if method == 'binom':
-        res = stats.binomtest(number_of_deg_with_tfbs,
-                           number_of_deg,
-                           p=prob)
-        pvalue = res.pvalue
-    elif method == 'hypergeom':
-        pvalue = stats.hypergeom.sf(number_of_deg_with_tfbs,
-                                  number_of_other,
-                                  number_of_other_with_tfbs,
-                                  number_of_deg)
-    else:
-        sys.exit("Wrong method! Goodby!")
-    return pvalue
+# def stat_tests_fraction(deg_scores, other_scores, threshold, method='binom'):
+#     number_of_deg = len(deg_scores)
+#     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
+#     number_of_other = len(other_scores)
+#     number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
+#     prob = number_of_other_with_tfbs / number_of_other
+#     #print(number_of_deg, number_of_deg_with_tfbs, number_of_other, number_of_other_with_tfbs)
+#     if method == 'binom':
+#         res = stats.binomtest(number_of_deg_with_tfbs,
+#                            number_of_deg,
+#                            p=prob)
+#         pvalue = res.pvalue
+#     elif method == 'hypergeom':
+#         pvalue = stats.hypergeom.sf(number_of_deg_with_tfbs,
+#                                   number_of_other,
+#                                   number_of_other_with_tfbs,
+#                                   number_of_deg)
+#     else:
+#         sys.exit("Wrong method! Goodby!")
+#     return pvalue
  
 
 #ANOTHER MONTECARLO APPROACH
@@ -271,11 +271,16 @@ def get_deg_gene_ids(df, cond, padj_thr=0.05, log2fc_thr=1):
     return gene_ids
 
 
-def get_other_gene_ids(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
+def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
     log2fc_thr = abs(log2fc_thr)
     df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
     df = df[df['padj'] > padj_thr]
     gene_ids = [i for i in df['id'] if isinstance(i, str)]
+    return gene_ids
+
+
+def get_other_gene_ids_for_set_case(set_ids, all_ids):
+    gene_ids = all_ids - set_ids
     return gene_ids
 
 

@@ -3,58 +3,88 @@ import sys
 import argparse
 from scipy import stats
 from enrest.functions import *
-from enrest.parsers import matrices_parser, fasta_parser
+from enrest.parsers import matrices_parser, fasta_parser, read_set_of_genes
 from enrest.scaner import scaner
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
-    parser.add_argument('matrices', action='store', help='path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
-    parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    subparsers = parser.add_subparsers(dest='subparser_name', help='Available commands:')
+    deg_parser = subparsers.add_parser('deg', help='Run test on DEGs')
+    set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
+
+    deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
+    deg_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
+    deg_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10, tair10)')
-    parser.add_argument('output', action='store', help='path to write table with results')
-    parser.add_argument('-m', '--method', action='store', choices=['montecarlo', 'binom', 'hypergeom'],
+    deg_parser.add_argument('output', action='store', help='Path to write table with results')
+    deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='METHOD', type=str, default='enrichment', 
-                        help='Method for calculating statistics (montecarlo, binom or hypergeom), default= montecarlo')
-    parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
-                        metavar='PARAMETER', type=str, default='enrichment', 
-                        help='Parameter to test (enrichment or fraction), default= enrichment')
-    parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
+                        help='Parameter estimated in test (enrichment or fraction), default= enrichment')
+    deg_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
-    parser.add_argument('-P', '--pvalue', action='store', type=float, default=0.05, 
+    deg_parser.add_argument('-P', '--pvalue', action='store', type=float, default=0.05, 
                         help='The pvalue is used as threshold to choose DEGs, default= 0.05')
-    parser.add_argument('-l', '--log2fc_deg', action='store', type=float, default=1., 
+    deg_parser.add_argument('-l', '--log2fc_deg', action='store', type=float, default=1., 
                         help='The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1')
-    parser.add_argument('-L', '--log2fc_back', action='store', type=float, default=0.32192809488736235, 
+    deg_parser.add_argument('-L', '--log2fc_back', action='store', type=float, default=0.32192809488736235, 
                         help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)')    
+
+    set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
+    set_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
+    set_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+         help='promoters of organism (hg38, mm10, tair10)')
+    set_parser.add_argument('output', action='store', help='Path to write table with results')
+    set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
+                        metavar='METHOD', type=str, default='enrichment', 
+                        help='Parameter estimated in test (enrichment or fraction), default= enrichment')
+    set_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
+                        metavar='FORMAT', type=str, default='meme', 
+                        help='Format of file with matrices (meme or hocomoco), default= meme')
+    
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     return(parser.parse_args())
 
 
-#OLD
-def run_test(deg_scores, other_scores, threshold_table, method, parameter):
+
+def run_test(deg_scores, other_scores, threshold_table, parameter):
     results = []
     for index in range(0, len(threshold_table)):
         threshold, fpr = threshold_table[index]
-        if method == 'montecarlo':
-            if parameter == "enrichment":
-                z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
-            elif parameter == "fraction":
-                z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
-            pval = stats.norm.sf(abs(z_score))
-        else:
-            if parameter == "enrichment":
-                pval = stat_tests_enrichment(deg_scores, other_scores, threshold, method=method)
-            elif parameter == "fraction":
-                pval = stat_tests_fraction(deg_scores, other_scores, threshold, method=method)            
+        if parameter == "enrichment":
+            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+        elif parameter == "fraction":
+            z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
+        pval = stats.norm.sf(abs(z_score))          
         results.append(pval)
     cpval = hartung(np.array(results))
     results.append(cpval)
     return results
+
+
+# BINOM and GEOM
+# def run_test(deg_scores, other_scores, threshold_table, method, parameter):
+#     results = []
+#     for index in range(0, len(threshold_table)):
+#         threshold, fpr = threshold_table[index]
+#         if method == 'montecarlo':
+#             if parameter == "enrichment":
+#                 z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+#             elif parameter == "fraction":
+#                 z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
+#             pval = stats.norm.sf(abs(z_score))
+#         else:
+#             if parameter == "enrichment":
+#                 pval = stat_tests_enrichment(deg_scores, other_scores, threshold, method=method)
+#             elif parameter == "fraction":
+#                 pval = stat_tests_fraction(deg_scores, other_scores, threshold, method=method)            
+#         results.append(pval)
+#     cpval = hartung(np.array(results))
+#     results.append(cpval)
+#     return results
 
 
 #ANOTHER APPROACH
@@ -72,16 +102,78 @@ def run_test(deg_scores, other_scores, threshold_table, method, parameter):
 #     st, cpval = stats.combine_pvalues(results_montecarlo)
 #     results_montecarlo.append(cpval)
 #     return results_montecarlo
+
+
+def set_case(args):
+    path_to_set = args.set
+    path_to_db = args.matrices
+    output_path = args.output
+    promoters = args.promoters
+    parameter = args.parameter
+    file_format = args.format
     
+    this_dir, this_filename = os.path.split(__file__)
+    if promoters == 'mm10':
+        path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+    elif promoters == 'hg38':
+        path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+    elif promoters == 'rnor6':
+        path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+        
+    print('-'*30)
+    print('Read SET of genes')
+    set_ids = read_set_of_genes(path_to_set)
+    print('-'*30)
+    print('Read promoters')
+    promoters = fasta_parser(path_to_promoters)
+    all_ids = set([i[0] for i in promoters])
+    print('-'*30)
+    print('Read matrices')
+    matrices = matrices_parser(path_to_db, f=file_format)
+    number_of_matrices = len(matrices)
+    print(f'Number of matrices = {number_of_matrices}')
+    print('-'*30)
+    container = []
+    for i in range(number_of_matrices):
+        name, matrix, matrix_length, middle_score = matrices[i]
+        container.append([name])
+        print(f'{i+1}. {name}:')
+        print('Scan promotrers')
+        all_results = scaner(promoters, matrix)
+        best_results = get_best_scores(all_results)
+        print('Calculate threshold table')
+        all_scores_flatten = get_all_flatten_scores(all_results)
+        threshold_table = get_threshold(all_scores_flatten)
+        threshold_table = np.array(threshold_table)
+        fprs_table = threshold_table[:,1]
+        fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
+        indexes = np.searchsorted(fprs_table, fprs_choosen)
+        threshold_table = threshold_table[indexes]
+        print('Run tests:')
+        for index, condition in enumerate(['ALL'], 1):
+            print(f'{index}. {condition} - condition')
+            other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
+            if parameter == "enrichment":
+                set_scores, other_scores = split_scores_by_gene_ids(all_results, set_ids, other_ids)
+            elif parameter == "fraction":
+                set_scores, other_scores = split_scores_by_gene_ids(best_results, set_ids, other_ids)
+            results = run_test(set_scores, other_scores, threshold_table, parameter)
+            container[-1] += results
+        print('-'*30)  
+    head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*1) + '\n' # new
+    head += '\t'.join(['ID'] + ['ALL']*4) + '\n' #new
+    write_table(head, container, output_path)
+    print('All done. Exit')
+    pass
+
+
     
-def main():
-    args = parse_args()
+def deg_case(args):
     path_to_deg = args.deg
     path_to_db = args.matrices
     output_path = args.output
     promoters = args.promoters
     parameter = args.parameter
-    method = args.method
     file_format = args.format
     padj_thr= args.pvalue
     log2fc_thr_deg = args.log2fc_deg
@@ -126,20 +218,29 @@ def main():
         threshold_table = threshold_table[indexes]
         print('Run tests:')
         for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
-            print(f'{index}. {condition} - condition')
+            print(f' {index}. {condition}')
             deg_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
-            other_ids = get_other_gene_ids(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
+            other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
             if parameter == "enrichment":
                 deg_scores, other_scores = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
             elif parameter == "fraction":
                 deg_scores, other_scores = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
-            results = run_test(deg_scores, other_scores, threshold_table, method, parameter)
+            results = run_test(deg_scores, other_scores, threshold_table, parameter)
             container[-1] += results
         print('-'*30)  
     head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*3) + '\n' # new
     head += '\t'.join(['ID'] + ['ALL']*4 + ['UP']*4 + ['DOWN']*4) + '\n' #new
     write_table(head, container, output_path)
     print('All done. Exit')
+    pass
+
+
+def main():
+    args = parse_args()    
+    if args.subparser_name == 'deg':
+        deg_case(args)
+    elif args.subparser_name == 'set':
+        set_case(args)   
     pass
 
     

@@ -24,20 +24,36 @@ pip install -e .
 The command `enREST.py -h` return:
 
 ```
-usage: enREST.py [-h] [-m METHOD] [-p PARAMETER] [-f FORMAT] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] deg matrices N output
+usage: enREST.py [-h] {deg,set} ...
+
+positional arguments:
+  {deg,set}   Available commands:
+    deg       Run test on DEGs
+    set       Run test on SET of genes
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+Command `enREST.py deg` is used for analisys DEGs (input of DEseq2 is used).
+
+Command `enREST.py set` is used for analisys SET of genes (input of gene list is used).
+
+## DEG case
+
+``````
+usage: enREST.py deg [-h] [-p METHOD] [-f FORMAT] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] deg matrices N output
 
 positional arguments:
   deg                   TSV file with DEG with ..., The NAME column must contain ensemble gene IDS
-  matrices              path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
+  matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
   N                     promoters of organism (hg38, mm10, tair10)
-  output                path to write table with results
+  output                Path to write table with results
 
 optional arguments:
   -h, --help            show this help message and exit
-  -m METHOD, --method METHOD
-                        Method for calculating statistics (montecarlo, binom or hypergeom), default= montecarlo
-  -p PARAMETER, --parameter PARAMETER
-                        Parameter to test (enrichment or fraction), default= enrichment
+  -p METHOD, --parameter METHOD
+                        Parameter estimated in test (enrichment or fraction), default= enrichment
   -f FORMAT, --format FORMAT
                         Format of file with matrices (meme or hocomoco), default= meme
   -P PVALUE, --pvalue PVALUE
@@ -48,7 +64,7 @@ optional arguments:
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
                         The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default=
                         log2(5/4)
-```
+``````
 
 #### Required arguments description
 
@@ -143,23 +159,19 @@ Path to write result table.
 
 Print help to STDOUT
 
-**Second optional argument** `-m; --method` :
-
-Options for `-m/--method ` are  _montecarlo_, _binom_ or _hypergeom_. Method are applied to calculate statistics. The default method is _montecarlo_.
-
-**Third optional argument** `-p; --parameter` :
+**Second optional argument** `-p; --parameter` :
 
 Options for `-p; --parameter ` are  _enrichment_ and _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
 
-**Fourth optional argument** `-f; --format` :
+**Third optional argument** `-f; --format` :
 
 Options for `-f/--format ` are  _meme_ and _hocomoco_. You should choose value of parameter based on your input format data. The default value is _meme_.
 
-**Fifth optional argument** `-p; --pvalue` :
+**Fourth optional argument** `-p; --pvalue` :
 
 The argument  `-p; --pvalue ` is pvalue cutoff for DEGs choosing (DEGs <= pvalue). The default value is _0.05_.
 
-**Sixth optional argument** `-l; --log2fc_deg` :
+**Fifth optional argument** `-l; --log2fc_deg` :
 
 The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DEGs >= Log2FoldChange OR DEGs <= -Log2FoldChange). The default value is _1_.
 
@@ -167,17 +179,145 @@ The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DE
 
 The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4)_.
 
-#### Example run
+## SET case
+
+````
+usage: enREST.py set [-h] [-p METHOD] [-f FORMAT] set matrices N output
+
+positional arguments:
+  set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
+  matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
+  N                     promoters of organism (hg38, mm10, tair10)
+  output                Path to write table with results
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p METHOD, --parameter METHOD
+                        Parameter estimated in test (enrichment or fraction), default= enrichment
+  -f FORMAT, --format FORMAT
+                        Format of file with matrices (meme or hocomoco), default= meme
+````
+
+#### Required arguments description
+
+**First positional argument** `set` :
+
+It's PATH to your SET of genes. Example:
+
+```
+ENSG00000072415
+ENSG00000094796
+ENSG00000143217
+ENSG00000038427
+ENSG00000186480
+...
+```
+
+**Second positional argument** `matrices`:
+
+It's PATH to file with matrices in HOCOMOCO [3] (PCMs) format or MEME [4] (PFMs) format. _It's should be noted, that file can also contain only one model_
+
+Example (HOCOMOCO):
+
+```
+>AHR_HUMAN.H11MO.0.B
+40.51343240527031	18.259112547756697	56.41253757072521	38.77363485291994
+10.877470982533044	11.870876719950774	34.66312982331297	96.54723985087516
+21.7165707818416	43.883079837598544	20.706746561638717	67.6523201955933
+2.5465132509466635	1.3171620263517245	145.8637051322628	4.231336967110781
+0.0	150.35847450464382	1.4927836298652875	2.1074592421627525
+3.441039751299748	0.7902972158110341	149.37613720253387	0.3512432070271259
+0.0	3.441039751299748	0.7024864140542533	149.81519121131782
+0.0	0.0	153.95871737667187	0.0
+43.07922333291745	66.87558226865211	16.159862546986584	27.844049228115868
+>AIRE_HUMAN.H11MO.0.C
+16.428571428571484	10.795918367346953	5.1632653061224625	8.918367346938803
+7.51020408163268	7.51020408163268	5.632653061224489	20.65306122448985
+5.632653061224489	5.632653061224489	8.448979591836776	21.591836734693906
+1.877551020408166	0.0	36.612244897959265	2.8163265306122534
+0.0	0.0	33.79591836734698	7.51020408163268
+13.14285714285717	1.877551020408166	0.938775510204083	25.346938775510242
+15.959183673469415	3.755102040816336	0.938775510204083	20.65306122448985
+15.02040816326536	5.632653061224489	5.632653061224489	15.02040816326536
+14.081632653061265	2.8163265306122534	5.632653061224489	18.775510204081698
+21.591836734693945	3.755102040816336	5.632653061224489	10.326530612244925
+15.959183673469415	1.877551020408166	2.8163265306122534	20.65306122448985
+9.38775510204083	5.632653061224489	2.8163265306122534	23.469387755102094
+0.0	0.938775510204083	36.612244897959265	3.755102040816336
+0.0	0.0	40.36734693877556	0.938775510204083
+9.38775510204083	3.755102040816336	10.326530612244925	17.836734693877606
+2.8163265306122534	7.51020408163268	7.51020408163268	23.469387755102094
+18.77551020408166	0.938775510204083	6.571428571428585	15.02040816326536
+16.663265306122497	11.030612244898006	4.45918367346938	9.153061224489816
+> ... etc.
+```
+
+Example (MEME):
+
+`````
+MEME version 4
+
+ALPHABET= ACGT
+
+strands: + -
+
+Background letter frequencies
+A 0.25 C 0.25 G 0.25 T 0.25
+
+MOTIF MA0004.1 Arnt
+letter-probability matrix: alength= 4 w= 6 nsites= 20 E= 0
+ 0.200000  0.800000  0.000000  0.000000
+ 0.950000  0.000000  0.050000  0.000000
+ 0.000000  1.000000  0.000000  0.000000
+ 0.000000  0.000000  1.000000  0.000000
+ 0.000000  0.000000  0.000000  1.000000
+ 0.000000  0.000000  1.000000  0.000000
+URL http://jaspar2018.genereg.net/matrix/MA0004.1
+
+MOTIF MA0006.1 Ahr::Arnt
+letter-probability matrix: alength= 4 w= 6 nsites= 24 E= 0
+ 0.125000  0.333333  0.083333  0.458333
+ 0.000000  0.000000  0.958333  0.041667
+ 0.000000  0.958333  0.000000  0.041667
+ 0.000000  0.000000  0.958333  0.041667
+ 0.000000  0.000000  0.000000  1.000000
+ 0.000000  0.000000  1.000000  0.000000
+URL http://jaspar2018.genereg.net/matrix/MA0006.1
+`````
+
+**Third positional argument**  `N`:
+
+Options for `N ` are _hg38_ or _mm10_. Depend on organism usage in research
+
+**Fourth positional argument** `output`:
+
+Path to write result table.
+
+
+#### Optional arguments description
+
+**First optional argument** `-h; --help` :
+
+Print help to STDOUT
+
+**Second optional argument** `-p; --parameter` :
+
+Options for `-p; --parameter ` are  _enrichment_ and _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
+
+**Third optional argument** `-f; --format` :
+
+Options for `-f/--format ` are  _meme_ and _hocomoco_. You should choose value of parameter based on your input format data. The default value is _meme_.
+
+## Example run
 
 Bash script with examples and data are located in `./example/example_run.sh` . You should run this script in `./example` directory.
 
 ```
-enREST.py \
+enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
 ./OVOL1_HUMAN.H11MO.0.C.pcm \
 hg38 \
 ./ovol1.montecarlo.enrichment.tsv \
---method montecarlo \
 --parameter enrichment \
 --format hocomoco
 ```
