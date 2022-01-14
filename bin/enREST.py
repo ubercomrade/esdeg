@@ -121,8 +121,6 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     # WORK IN PROGRESS? PICs
     # logos_dir = f"{output_dir}/logos/"
     # distributions_dir = f"{output_dir}/distributions/"
-    # if not os.path.isdir(output_dir):
-    #     os.mkdir(output_dir)
     # if not os.path.isdir(logos_dir):
     #     os.mkdir(logos_dir)
     # if not os.path.isdir(distributions_dir):
@@ -186,8 +184,6 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     # WORK IN PROGRESS? PICs
     # logos_dir = f"{output_dir}/logos/"
     # distributions_dir = f"{output_dir}/distributions/"
-    # if not os.path.isdir(output_dir):
-    #     os.mkdir(output_dir)
     # if not os.path.isdir(logos_dir):
     #     os.mkdir(logos_dir)
     # if not os.path.isdir(distributions_dir):
@@ -265,6 +261,9 @@ def main():
         log2fc_thr_deg = args.log2fc_deg
         log2fc_thr_background = args.log2fc_back
         
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+
         this_dir, this_filename = os.path.split(__file__)
         if promoters == 'mm10':
             path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
@@ -290,6 +289,9 @@ def main():
         promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
+
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
     
         this_dir, this_filename = os.path.split(__file__)
         if promoters == 'mm10':
