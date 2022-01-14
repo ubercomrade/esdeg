@@ -1,5 +1,5 @@
 import numpy as np
-import logomaker
+#import logomaker
 import matplotlib.pyplot as plt
 from numba import njit
 from operator import itemgetter
@@ -173,21 +173,21 @@ def plot_bs_distribution(set_scores, threshold_table, write_path, length=2000, w
     pass
 
 
-def plot_logo(pfm, write_path):
-    bits = np.sum(pfm * np.log2(pfm / 0.25), axis=0)
-    bits = bits * pfm
-    bits_df = pd.DataFrame(bits.T)
-    bits_df.columns = ['A', 'C', 'G', 'T']
-    fig, ax = plt.subplots(figsize=(10, 2.5), dpi=200)
-    ss_logo = logomaker.Logo(bits_df,
-                             width=.9,
-                             vpad=.02,
-                             stack_order='big_on_top',
-                             font_name='DejaVu Sans',
-                             show_spines=False,
-                             ax=ax)
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    plt.savefig(write_path, format="jpg", dpi=200, bbox_inches='tight', pad_inches = 0.1)
-    plt.close()
-    pass
+# def plot_logo(pfm, write_path):
+#     bits = np.sum(pfm * np.log2(pfm / 0.25), axis=0)
+#     bits = bits * pfm
+#     bits_df = pd.DataFrame(bits.T)
+#     bits_df.columns = ['A', 'C', 'G', 'T']
+#     fig, ax = plt.subplots(figsize=(10, 2.5), dpi=200)
+#     ss_logo = logomaker.Logo(bits_df,
+#                              width=.9,
+#                              vpad=.02,
+#                              stack_order='big_on_top',
+#                              font_name='DejaVu Sans',
+#                              show_spines=False,
+#                              ax=ax)
+#     ax.get_xaxis().set_visible(False)
+#     ax.get_yaxis().set_visible(False)
+#     plt.savefig(write_path, format="jpg", dpi=200, bbox_inches='tight', pad_inches = 0.1)
+#     plt.close()
+#     pass
