@@ -17,7 +17,7 @@ def parse_args():
     deg_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
     deg_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10, tair10)')
-    deg_parser.add_argument('output', action='store', help='Path to write table with results')
+    deg_parser.add_argument('output', action='store', help='Name of directory for output files')
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='METHOD', type=str, default='enrichment', 
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
@@ -35,7 +35,7 @@ def parse_args():
     set_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
     set_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='promoters of organism (hg38, mm10, tair10)')
-    set_parser.add_argument('output', action='store', help='Path to write table with results')
+    set_parser.add_argument('output', action='store', help='Name of directory for output files')
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='METHOD', type=str, default='enrichment', 
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
@@ -50,18 +50,30 @@ def parse_args():
 
 
 
-def run_test(deg_scores, other_scores, threshold_table, parameter):
-    results = []
-    for index in range(0, len(threshold_table)):
+def run_test(genes, set_scores, other_scores, threshold_table, parameter):
+    results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0,
+               ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0,
+               ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0,
+               ('COMBINE', 'pval'): 0}
+    pvals = []
+    genes = np.array(genes)
+    for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
         threshold, fpr = threshold_table[index]
         if parameter == "enrichment":
-            z_score = montecarlo_enrichment(deg_scores, other_scores, threshold)
+            z_score, fold = montecarlo_enrichment(set_scores, other_scores, threshold)
         elif parameter == "fraction":
-            z_score = montecarlo_fraction(deg_scores, other_scores, threshold)
-        pval = stats.norm.sf(abs(z_score))          
-        results.append(pval)
-    cpval = hartung(np.array(results))
-    results.append(cpval)
+            z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
+        pval = stats.norm.sf(z_score)          
+        pvals.append(pval)
+        results[(level, 'pval')] = pval
+        results[(level, 'log2Fold')] = fold
+        # OFF
+        # genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
+        # genes_without_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) == 0]
+        # results[(level, 'GeneIdsWithBS')] = '; '.join(genes_with_bs)
+        # results[(level, 'GeneIdsWithoutBS')] = '; '.join(genes_without_bs)
+    cpval = hartung(np.array(pvals))
+    results[('COMBINE', 'pval')] = cpval
     return results
 
 
@@ -104,22 +116,17 @@ def run_test(deg_scores, other_scores, threshold_table, parameter):
 #     return results_montecarlo
 
 
-def set_case(args):
-    path_to_set = args.set
-    path_to_db = args.matrices
-    output_path = args.output
-    promoters = args.promoters
-    parameter = args.parameter
-    file_format = args.format
-    
-    this_dir, this_filename = os.path.split(__file__)
-    if promoters == 'mm10':
-        path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
-    elif promoters == 'hg38':
-        path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
-    elif promoters == 'rnor6':
-        path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
-        
+def set_case(path_to_set, path_to_db, output_dir, path_to_promoters, 
+             file_format="meme", parameter="enrichment"):    
+    # WORK IN PROGRESS? PICs
+    # logos_dir = f"{output_dir}/logos/"
+    # distributions_dir = f"{output_dir}/distributions/"
+    # if not os.path.isdir(output_dir):
+    #     os.mkdir(output_dir)
+    # if not os.path.isdir(logos_dir):
+    #     os.mkdir(logos_dir)
+    # if not os.path.isdir(distributions_dir):
+    #     os.mkdir(distributions_dir)
     print('-'*30)
     print('Read SET of genes')
     set_ids = read_set_of_genes(path_to_set)
@@ -135,11 +142,11 @@ def set_case(args):
     print('-'*30)
     container = []
     for i in range(number_of_matrices):
-        name, matrix, matrix_length, middle_score = matrices[i]
-        container.append([name])
+        name, pwm, pfm, matrix_length, middle_score = matrices[i]
+        line = {('', 'ID'): name}
         print(f'{i+1}. {name}:')
         print('Scan promotrers')
-        all_results = scaner(promoters, matrix)
+        all_results = scaner(promoters, pwm)
         best_results = get_best_scores(all_results)
         print('Calculate threshold table')
         all_scores_flatten = get_all_flatten_scores(all_results)
@@ -149,44 +156,42 @@ def set_case(args):
         fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
         indexes = np.searchsorted(fprs_table, fprs_choosen)
         threshold_table = threshold_table[indexes]
-        print('Run tests:')
-        for index, condition in enumerate(['ALL'], 1):
-            print(f'{index}. {condition} - condition')
-            other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
-            if parameter == "enrichment":
-                set_scores, other_scores = split_scores_by_gene_ids(all_results, set_ids, other_ids)
-            elif parameter == "fraction":
-                set_scores, other_scores = split_scores_by_gene_ids(best_results, set_ids, other_ids)
-            results = run_test(set_scores, other_scores, threshold_table, parameter)
-            container[-1] += results
+        print('Run test')
+        other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
+        if parameter == "enrichment":
+            set_scores, other_scores, genes = split_scores_by_gene_ids(all_results, set_ids, other_ids)
+        elif parameter == "fraction":
+            set_scores, other_scores, genes = split_scores_by_gene_ids(best_results, set_ids, other_ids)
+        results = run_test(genes, set_scores, other_scores, threshold_table, parameter)
+        # WORK IN PROGRESS
+        # write_distrubution = f"{distributions_dir}/{name}.jpg"
+        # write_logo = f"{logos_dir}/{name}.jpg"
+        # plot_bs_distribution(set_scores, threshold_table, write_distrubution, length=2000, window=20)
+        # plot_logo(pfm, write_logo)
+        # line.update({('COMBINE', 'Logo'): write_logo,
+        #              ('COMBINE', 'BsDistrubution'): write_distrubution})
+        line.update(results)
+        container.append(line)
         print('-'*30)  
-    head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*1) + '\n' # new
-    head += '\t'.join(['ID'] + ['ALL']*4) + '\n' #new
-    write_table(head, container, output_path)
+    df = pd.DataFrame(container, columns=container[0].keys())
+    output_path = f"{output_dir}/table.all.tsv"
+    df.to_csv(output_path, sep='\t', index=False)
     print('All done. Exit')
-    pass
-
+    return df, set_scores, threshold_table
 
     
-def deg_case(args):
-    path_to_deg = args.deg
-    path_to_db = args.matrices
-    output_path = args.output
-    promoters = args.promoters
-    parameter = args.parameter
-    file_format = args.format
-    padj_thr= args.pvalue
-    log2fc_thr_deg = args.log2fc_deg
-    log2fc_thr_background = args.log2fc_back
-    
-    this_dir, this_filename = os.path.split(__file__)
-    if promoters == 'mm10':
-        path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
-    elif promoters == 'hg38':
-        path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
-    elif promoters == 'rnor6':
-        path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
-        
+def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters, 
+             file_format='meme', parameter='enrichment', padj_thr=0.05,
+             log2fc_thr_deg=1, log2fc_thr_background=np.log2(5/4)):    
+    # WORK IN PROGRESS? PICs
+    # logos_dir = f"{output_dir}/logos/"
+    # distributions_dir = f"{output_dir}/distributions/"
+    # if not os.path.isdir(output_dir):
+    #     os.mkdir(output_dir)
+    # if not os.path.isdir(logos_dir):
+    #     os.mkdir(logos_dir)
+    # if not os.path.isdir(distributions_dir):
+    #     os.mkdir(distributions_dir)
     print('-'*30)
     print('Read DEG table')
     deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
@@ -200,13 +205,14 @@ def deg_case(args):
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
-    container = []
+    container = {'ALL': [],
+                 'UP': [],
+                 'DOWN': []}
     for i in range(number_of_matrices):
-        name, matrix, matrix_length, middle_score = matrices[i]
-        container.append([name])
+        name, pwm, pfm, matrix_length, middle_score = matrices[i]
         print(f'{i+1}. {name}:')
         print('Scan promotrers')
-        all_results = scaner(promoters, matrix)
+        all_results = scaner(promoters, pwm)
         best_results = get_best_scores(all_results)
         print('Calculate threshold table')
         all_scores_flatten = get_all_flatten_scores(all_results)
@@ -218,19 +224,30 @@ def deg_case(args):
         threshold_table = threshold_table[indexes]
         print('Run tests:')
         for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
+            line = {('', 'ID'): name}
             print(f' {index}. {condition}')
             deg_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
             other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
             if parameter == "enrichment":
-                deg_scores, other_scores = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
+                deg_scores, other_scores, genes = split_scores_by_gene_ids(all_results, deg_ids, other_ids)
             elif parameter == "fraction":
-                deg_scores, other_scores = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
-            results = run_test(deg_scores, other_scores, threshold_table, parameter)
-            container[-1] += results
-        print('-'*30)  
-    head = '\t'.join(['FPR->'] + ['LOW', 'MIDDLE', 'HIGHT', 'COMMON']*3) + '\n' # new
-    head += '\t'.join(['ID'] + ['ALL']*4 + ['UP']*4 + ['DOWN']*4) + '\n' #new
-    write_table(head, container, output_path)
+                deg_scores, other_scores, genes = split_scores_by_gene_ids(best_results, deg_ids, other_ids)
+            results = run_test(genes, deg_scores, other_scores, threshold_table, parameter)
+            line.update(results)
+            # WORK IN PROGRESS? (LOGO and DISTR)
+            # write_distrubution = f"{distributions_dir}/{name}.{condition}.jpg"
+            # write_logo = f"{logos_dir}/{name}.{condition}.jpg"
+            # plot_bs_distribution(deg_scores, threshold_table, write_distrubution, length=2000, window=20)
+            # plot_logo(pfm, write_logo)
+            # line.update({('COMBINE', 'Logo'): write_logo})
+            #             ('COMBINE', 'BsDistrubution'): write_distrubution})
+            container[condition].append(line)
+    print('-'*30)
+    for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
+        df = pd.DataFrame(container[condition], columns=container[condition][0].keys())
+        condition = condition.lower()
+        output_path = f"{output_dir}/table.{condition}.tsv"
+        df.to_csv(output_path, sep='\t', index=False)
     print('All done. Exit')
     pass
 
@@ -238,11 +255,57 @@ def deg_case(args):
 def main():
     args = parse_args()    
     if args.subparser_name == 'deg':
-        deg_case(args)
+        path_to_deg = args.deg
+        path_to_db = args.matrices
+        output_path = args.output
+        promoters = args.promoters
+        parameter = args.parameter
+        file_format = args.format
+        padj_thr= args.pvalue
+        log2fc_thr_deg = args.log2fc_deg
+        log2fc_thr_background = args.log2fc_back
+        
+        this_dir, this_filename = os.path.split(__file__)
+        if promoters == 'mm10':
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+        elif promoters == 'hg38':
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+        elif promoters == 'rnor6':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+            
+        deg_case(path_to_deg, 
+                 path_to_db,
+                 output_dir, 
+                 path_to_promoters, 
+                 file_format=file_format, 
+                 parameter=parameter, 
+                 padj_thr=padj_thr,
+                 log2fc_thr_deg=log2fc_thr_deg, 
+                 log2fc_thr_background=log2fc_thr_background)
+        
     elif args.subparser_name == 'set':
-        set_case(args)   
+        path_to_set = args.set
+        path_to_db = args.matrices
+        output_path = args.output
+        promoters = args.promoters
+        parameter = args.parameter
+        file_format = args.format
+    
+        this_dir, this_filename = os.path.split(__file__)
+        if promoters == 'mm10':
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+        elif promoters == 'hg38':
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+        elif promoters == 'rnor6':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+        set_case(path_to_set, 
+                 path_to_db, 
+                 output_dir, 
+                 path_to_promoters, 
+                 file_format=file_format, 
+                 parameter=parameter)   
     pass
 
     
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

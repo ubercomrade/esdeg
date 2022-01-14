@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -87,7 +85,7 @@ def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
             other_scores.append(score)
         else:
             continue
-    return np.array(deg_scores), np.array(other_scores)
+    return np.array(deg_scores), np.array(other_scores), exist
 
 
 # def fisher_test(deg_scores, other_scores, threshold):
@@ -111,6 +109,9 @@ def calculate_enrichment(scores, threshold):
     return enrichment
 
 
+# def promoters_with_sites(scores, threshold):
+#     counts = np.greater_equal(scores, threshold)
+
 # MONTECARLO APPROACH
 @njit(cache=True)
 def montecarlo_enrichment(deg_scores, other_scores, threshold):
@@ -123,8 +124,9 @@ def montecarlo_enrichment(deg_scores, other_scores, threshold):
         sample = other_scores[sample_indexes]
         vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
-    z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
-    return z_score
+    z_score = abs((real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std)
+    #print(real_enrichmnet, random_enrichmnet_mean, real_enrichmnet / random_enrichmnet_mean)
+    return z_score, np.log2(real_enrichmnet / random_enrichmnet_mean)
 
 
 @njit(cache=True)
@@ -140,8 +142,9 @@ def montecarlo_fraction(deg_scores, other_scores, threshold):
         number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-    z_score = (real_fraction - random_fraction_mean) / random_fraction_std
-    return z_score
+    z_score = abs((real_fraction - random_fraction_mean) / random_fraction_std)
+    #print(real_fraction, random_fraction_mean, real_fraction / random_fraction_mean)
+    return z_score, np.log2(real_fraction / random_fraction_mean)
 
 
 # BINOMTEST APPROACH
