@@ -48,7 +48,7 @@ positional arguments:
   deg                   TSV file with DEG with ..., The NAME column must contain ensemble gene IDS
   matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
   N                     promoters of organism (hg38, mm10, tair10)
-  output                Path to write table with results
+  output                Name of directory for output files
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -188,7 +188,7 @@ positional arguments:
   set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
   matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
   N                     promoters of organism (hg38, mm10, tair10)
-  output                Path to write table with results
+  output                Name of directory for output files
 
 optional arguments:
   -h, --help            show this help message and exit
