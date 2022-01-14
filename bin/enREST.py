@@ -172,7 +172,7 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
         container.append(line)
         print('-'*30)  
     df = pd.DataFrame(container, columns=container[0].keys())
-    output_path = f"{output_dir}/table.all.tsv"
+    output_path = f"{output_dir}/all.tsv"
     df.to_csv(output_path, sep='\t', index=False)
     print('All done. Exit')
     return df, set_scores, threshold_table
@@ -242,7 +242,7 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         df = pd.DataFrame(container[condition], columns=container[condition][0].keys())
         condition = condition.lower()
-        output_path = f"{output_dir}/table.{condition}.tsv"
+        output_path = f"{output_dir}/{condition}.tsv"
         df.to_csv(output_path, sep='\t', index=False)
     print('All done. Exit')
     pass
