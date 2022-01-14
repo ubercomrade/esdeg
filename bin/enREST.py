@@ -257,7 +257,7 @@ def main():
     if args.subparser_name == 'deg':
         path_to_deg = args.deg
         path_to_db = args.matrices
-        output_path = args.output
+        output_dir = args.output
         promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
@@ -286,7 +286,7 @@ def main():
     elif args.subparser_name == 'set':
         path_to_set = args.set
         path_to_db = args.matrices
-        output_path = args.output
+        output_dir = args.output
         promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
