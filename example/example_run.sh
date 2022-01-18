@@ -20,7 +20,7 @@ hg38 \
 
 enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
-./NFKB1_HUMAN.H11MO.1.B.pcm \
+./HOCOMOCOv11_several_matrices.txt \
 hg38 \
 ./nfkb1.montecarlo.enrichment \
 --parameter enrichment \
@@ -29,7 +29,7 @@ hg38 \
 
 enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
-./NFKB1_HUMAN.H11MO.1.B.pcm \
+./HOCOMOCOv11_several_matrices.txt \
 hg38 \
 ./nfkb1.montecarlo.fraction \
 --parameter fraction \

@@ -287,6 +287,28 @@ def get_other_gene_ids_for_set_case(set_ids, all_ids):
     return gene_ids
 
 
+def run_test(genes, set_scores, other_scores, threshold_table, parameter):
+    results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0,
+               ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0,
+               ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0,
+               ('COMBINE', 'pval'): 0}
+    pvals = []
+    genes = np.array(genes)
+    for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
+        threshold, fpr = threshold_table[index]
+        if parameter == "enrichment":
+            z_score, fold = montecarlo_enrichment(set_scores, other_scores, threshold)
+        elif parameter == "fraction":
+            z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
+        pval = stats.norm.sf(z_score)          
+        pvals.append(pval)
+        results[(level, 'pval')] = pval
+        results[(level, 'log2Fold')] = fold
+    cpval = hartung(np.array(pvals))
+    results[('COMBINE', 'pval')] = cpval
+    return results
+
+
 def write_table(head, data, path):
     with open(path, 'w') as file:
         file.write(head)
