@@ -65,7 +65,7 @@ def main():
         padj_thr= args.pvalue
         log2fc_thr_deg = args.log2fc_deg
         log2fc_thr_background = args.log2fc_back
-        cores = args.cores
+        number_of_cores = args.cores
         
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
@@ -86,7 +86,8 @@ def main():
                  parameter=parameter, 
                  padj_thr=padj_thr,
                  log2fc_thr_deg=log2fc_thr_deg, 
-                 log2fc_thr_background=log2fc_thr_background)
+                 log2fc_thr_background=log2fc_thr_background,
+                 number_of_cores=number_of_cores)
         
     elif args.subparser_name == 'set':
         path_to_set = args.set
