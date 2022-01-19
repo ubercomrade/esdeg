@@ -42,7 +42,7 @@ Command `enREST.py set` is used for analisys SET of genes (input of gene list is
 ## DEG case
 
 ``````
-usage: enREST.py deg [-h] [-p METHOD] [-f FORMAT] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] deg matrices N output
+usage: enREST.py deg [-h] [-p PARAMETER] [-f FORMAT] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] [-c CORES] deg matrices N output
 
 positional arguments:
   deg                   TSV file with DEG with ..., The NAME column must contain ensemble gene IDS
@@ -52,7 +52,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p METHOD, --parameter METHOD
+  -p PARAMETER, --parameter PARAMETER
                         Parameter estimated in test (enrichment or fraction), default= enrichment
   -f FORMAT, --format FORMAT
                         Format of file with matrices (meme or hocomoco), default= meme
@@ -64,6 +64,8 @@ optional arguments:
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
                         The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default=
                         log2(5/4)
+  -c CORES, --cores CORES
+                        Number of cores, default= 2
 ``````
 
 #### Required arguments description
@@ -179,10 +181,14 @@ The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DE
 
 The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4)_.
 
+**Seventh optional argument**  `-c; --cores` :
+
+Number of cores are used to calculate results. 
+
 ## SET case
 
 ````
-usage: enREST.py set [-h] [-p METHOD] [-f FORMAT] set matrices N output
+usage: enREST.py set [-h] [-p PARAMETER] [-f FORMAT] [-c CORES] set matrices N output
 
 positional arguments:
   set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
@@ -192,10 +198,12 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p METHOD, --parameter METHOD
+  -p PARAMETER, --parameter PARAMETER
                         Parameter estimated in test (enrichment or fraction), default= enrichment
   -f FORMAT, --format FORMAT
                         Format of file with matrices (meme or hocomoco), default= meme
+  -c CORES, --cores CORES
+                        Number of cores, default= 2
 ````
 
 #### Required arguments description
@@ -308,6 +316,10 @@ Options for `-p; --parameter ` are  _enrichment_ and _fraction_. If you choose _
 
 Options for `-f/--format ` are  _meme_ and _hocomoco_. You should choose value of parameter based on your input format data. The default value is _meme_.
 
+**Fourth optional argument**  `-c; --cores` :
+
+Number of cores are used to calculate results. 
+
 ## Example run
 
 Bash script with examples and data are located in `./example/example_run.sh` . You should run this script in `./example` directory.
@@ -315,11 +327,12 @@ Bash script with examples and data are located in `./example/example_run.sh` . Y
 ```
 enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
-./OVOL1_HUMAN.H11MO.0.C.pcm \
+./several_matrices_for_deg_testing.txt \
 hg38 \
-./ovol1.montecarlo.enrichment.tsv \
+./ovol1.montecarlo.enrichment \
 --parameter enrichment \
---format hocomoco
+--format hocomoco \
+-c 3
 ```
 
 ## Output file format
