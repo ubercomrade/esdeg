@@ -1,6 +1,6 @@
 #!/bin/bash
 
-enREST.py deg \
+time enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
 ./several_matrices_for_deg_testing.txt \
 hg38 \
@@ -9,7 +9,7 @@ hg38 \
 --format hocomoco \
 -c 3
 
-enREST.py deg \
+time enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
 ./several_matrices_for_deg_testing.txt \
 hg38 \
@@ -19,7 +19,7 @@ hg38 \
 -c 3
 
 
-enREST.py set \
+time enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
 ./several_matrices_for_set_testing.txt \
 hg38 \
@@ -29,7 +29,7 @@ hg38 \
 -c 4
 
 
-enREST.py set \
+time enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
 ./several_matrices_for_set_testing.txt \
 hg38 \
