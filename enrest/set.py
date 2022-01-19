@@ -49,9 +49,9 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     with ThreadPoolExecutor(number_of_cores) as pool:
         results = pool.map(partial(work_with_matrix, set_ids=set_ids, all_ids=all_ids, promoters=promoters, parameter=parameter), matrices)
         results = list(results)
-    print(results)    
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"
     df.to_csv(output_path, sep='\t', index=False)
+    print('-'*30)
     print('All done. Exit')
     return None

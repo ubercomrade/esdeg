@@ -2,35 +2,38 @@
 
 enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
-./OVOL1_HUMAN.H11MO.0.C.pcm \
+./several_matrices_for_deg_testing.txt \
 hg38 \
 ./ovol1.montecarlo.enrichment \
 --parameter enrichment \
---format hocomoco
-
+--format hocomoco \
+-c 3
 
 enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
-./OVOL1_HUMAN.H11MO.0.C.pcm \
+./several_matrices_for_deg_testing.txt \
 hg38 \
 ./ovol1.montecarlo.fraction \
 --parameter fraction \
---format hocomoco
+--format hocomoco \
+-c 3
 
 
 enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
-./HOCOMOCOv11_several_matrices.txt \
+./several_matrices_for_set_testing.txt \
 hg38 \
 ./nfkb1.montecarlo.enrichment \
 --parameter enrichment \
---format hocomoco
+--format hocomoco \
+-c 4
 
 
 enREST.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
-./HOCOMOCOv11_several_matrices.txt \
+./several_matrices_for_set_testing.txt \
 hg38 \
 ./nfkb1.montecarlo.fraction \
 --parameter fraction \
---format hocomoco
+--format hocomoco \
+-c 4
