@@ -56,6 +56,7 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
         results = pool.map(partial(work_with_matrix, deg_table=deg_table, promoters=promoters, parameter=parameter,
             padj_thr=padj_thr, log2fc_thr_deg=log2fc_thr_deg, log2fc_thr_background=log2fc_thr_background), matrices)
     print('-'*30)
+    print(results)
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         container = [i[condition] for i in results]
         df = pd.DataFrame(container, columns=container[0].keys())
