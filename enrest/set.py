@@ -46,7 +46,7 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
-    with ThreadPoolExecutor(number_of_cores) as pool:
+    with Pool(number_of_cores) as pool:
         results = pool.map(partial(work_with_matrix, set_ids=set_ids, all_ids=all_ids, promoters=promoters, parameter=parameter), matrices)
         results = list(results)
     df = pd.DataFrame(results, columns=results[0].keys())
