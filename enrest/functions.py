@@ -276,7 +276,7 @@ def get_deg_gene_ids(df, cond, padj_thr=0.05, log2fc_thr=1):
 
 def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
     log2fc_thr = abs(log2fc_thr)
-    df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
+    #df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
     df = df[df['padj'] > padj_thr]
     gene_ids = [i for i in df['id'] if isinstance(i, str)]
     return gene_ids
@@ -288,9 +288,9 @@ def get_other_gene_ids_for_set_case(set_ids, all_ids):
 
 
 def run_test(genes, set_scores, other_scores, threshold_table, parameter):
-    results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0,
-               ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0,
-               ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0,
+    results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0, ('LOW', 'genes'): [],
+               ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0, ('MIDDLE', 'genes'): [],
+               ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0, ('HIGH', 'genes'): [],
                ('COMBINE', 'pval'): 0}
     pvals = []
     genes = np.array(genes)
@@ -304,6 +304,8 @@ def run_test(genes, set_scores, other_scores, threshold_table, parameter):
         pvals.append(pval)
         results[(level, 'pval')] = pval
         results[(level, 'log2Fold')] = fold
+        genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
+        results[(level, 'genes')] = ';'.join(genes_with_bs)
     cpval = hartung(np.array(pvals))
     results[('COMBINE', 'pval')] = cpval
     return results
