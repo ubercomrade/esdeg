@@ -301,7 +301,7 @@ def run_test(genes, set_scores, other_scores, threshold_table, parameter):
             genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
         elif parameter == "fraction":
             z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
-            genes_with_bs = genes[np.greater_equal(set_scores, threshold), axis=1]
+            genes_with_bs = genes[np.greater_equal(set_scores, threshold)]
         pval = stats.norm.sf(z_score)          
         pvals.append(pval)
         results[(level, 'pval')] = pval
