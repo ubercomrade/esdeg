@@ -298,13 +298,14 @@ def run_test(genes, set_scores, other_scores, threshold_table, parameter):
         threshold, fpr = threshold_table[index]
         if parameter == "enrichment":
             z_score, fold = montecarlo_enrichment(set_scores, other_scores, threshold)
+            genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
         elif parameter == "fraction":
             z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
+            genes_with_bs = genes[np.greater_equal(set_scores, threshold), axis=1]
         pval = stats.norm.sf(z_score)          
         pvals.append(pval)
         results[(level, 'pval')] = pval
         results[(level, 'log2Fold')] = fold
-        genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
         results[(level, 'genes')] = ';'.join(genes_with_bs)
     cpval = hartung(np.array(pvals))
     results[('COMBINE', 'pval')] = cpval
