@@ -4,7 +4,7 @@ from multiprocessing import Pool
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import partial
 from enrest.functions import *
-from enrest.parsers import matrices_parser, fasta_parser, read_set_of_genes
+from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
 from enrest.scaner import scaner
 
 
