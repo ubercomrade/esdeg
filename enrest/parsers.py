@@ -128,7 +128,7 @@ def fasta_parser(path):
     with open(path) as file:
         for line in file:
             if line.startswith('>'):
-                if not gname == '':
+                if counter != 0:
                     seq += complement(seq)
                     seq = np.array(seq, dtype='c')
                     seq = seq.view(np.uint8)
