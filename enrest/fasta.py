@@ -21,7 +21,6 @@ def work_with_matrix(args, foreground=None, background=None, promoters=None, par
     fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
-    other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
     if parameter == "enrichment":
         foreground_scores = np.array([i[1] for i in scaner(foreground, pwm)])
         background_scores = np.array([i[1] for i in scaner(background, pwm)])
