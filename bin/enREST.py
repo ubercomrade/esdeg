@@ -4,13 +4,14 @@ import argparse
 from enrest.functions import *
 from enrest.set import set_case
 from enrest.deg import deg_case
-
+from enrest.fasta import fasta_case
 
 def parse_args():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser_name', help='Available commands:')
     deg_parser = subparsers.add_parser('deg', help='Run test on DEGs')
     set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
+    fasta_parser = subparsers.add_parser('fasta', help='Run test on user FASTA files')
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
@@ -44,8 +45,22 @@ def parse_args():
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
     set_parser.add_argument('-c', '--cores', action='store', type=int, default=2, 
-                        help='Number of cores, default= 2')    
+                        help='Number of cores, default= 2')
 
+    fasta_parser.add_argument('foreground', action='store', help='Fasta file with sequences are used as foreground')
+    fasta_parser.add_argument('background', action='store', help='Fasta file with sequences are used as background')
+    fasta_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
+    fasta_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+         help='promoters of organism (hg38, mm10, tair10)')
+    fasta_parser.add_argument('output', action='store', help='Name of directory for output files')
+    fasta_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
+                        metavar='PARAMETER', type=str, default='enrichment', 
+                        help='Parameter estimated in test (enrichment or fraction), default= enrichment')
+    fasta_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
+                        metavar='FORMAT', type=str, default='meme', 
+                        help='Format of file with matrices (meme or hocomoco), default= meme')
+    fasta_parser.add_argument('-c', '--cores', action='store', type=int, default=2, 
+                        help='Number of cores, default= 2')   
     
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
@@ -114,7 +129,36 @@ def main():
                  path_to_promoters, 
                  file_format=file_format, 
                  parameter=parameter,
-                 number_of_cores=number_of_cores)   
+                 number_of_cores=number_of_cores)
+
+    elif args.subparser_name == 'fasta':
+        path_to_foreground = args.foreground
+        path_to_background = args.background
+        path_to_db = args.matrices
+        output_dir = args.output
+        promoters = args.promoters
+        parameter = args.parameter
+        file_format = args.format
+        number_of_cores = args.cores
+
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+    
+        this_dir, this_filename = os.path.split(__file__)
+        if promoters == 'mm10':
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+        elif promoters == 'hg38':
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+        elif promoters == 'rnor6':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+        fasta_case(path_to_foreground,
+                 path_to_background,
+                 path_to_db, 
+                 output_dir, 
+                 path_to_promoters, 
+                 file_format=file_format, 
+                 parameter=parameter,
+                 number_of_cores=number_of_cores)      
     pass
 
     

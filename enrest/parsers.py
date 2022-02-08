@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 #import logomaker
 import matplotlib.pyplot as plt
@@ -35,7 +36,7 @@ def read_list_of_matrix_meme(path):
                         length, nsites = map(int, itemgetter(*[5,7])(line.strip().split()))
                         break
                 for index, line in enumerate(file):
-                    line = [float(i) * nsites for i in line.strip().split('\t')]
+                    line = [float(i) * nsites for i in line.strip().split()]
                     matrix.append(line)
                     if index == length - 1:
                         container.append((matrix_name, np.array(matrix).T))
@@ -99,8 +100,8 @@ def matrices_parser(path, f="meme"):
     return container
 
 
-### FASTA PART ###
-def fasta_parser(path):
+### PROMOTERS PART ###
+def promoters_parser(path):
     container = []
     gname = ''
     seq = ''
@@ -114,6 +115,26 @@ def fasta_parser(path):
                     container.append((gname, actg_to_numbers(seq)))
                 gname = line.strip().split(':')[0][1:]
                 seq = ''
+            else:
+                seq += line.strip().upper()
+    return container
+
+
+### FASTA PART ###
+def fasta_parser(path):
+    container = []
+    seq = ''
+    counter = 0
+    with open(path) as file:
+        for line in file:
+            if line.startswith('>'):
+                if not gname == '':
+                    seq += complement(seq)
+                    seq = np.array(seq, dtype='c')
+                    seq = seq.view(np.uint8)
+                    container.append((counter, actg_to_numbers(seq)))
+                seq = ''
+                counter += 1
             else:
                 seq += line.strip().upper()
     return container

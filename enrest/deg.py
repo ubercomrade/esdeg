@@ -45,7 +45,7 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     deg_table = deg_table[deg_table['padj'] <= 1]
     print('-'*30)
     print('Read promoters')
-    promoters = fasta_parser(path_to_promoters)
+    promoters = promoters_parser(path_to_promoters)
     print('-'*30)
     print('Read matrices')
     matrices = matrices_parser(path_to_db, f=file_format)

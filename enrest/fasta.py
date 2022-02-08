@@ -8,7 +8,7 @@ from enrest.parsers import matrices_parser, fasta_parser, read_set_of_genes
 from enrest.scaner import scaner
 
 
-def work_with_matrix(args, set_ids=None, all_ids=None, promoters=None, parameter=None):
+def work_with_matrix(args, foreground=None, background=None, promoters=None, parameter=None):
     name, pwm, pfm, matrix_length, middle_score = args
     line = {('', 'ID'): name}
     print(f'{name}')
@@ -23,19 +23,22 @@ def work_with_matrix(args, set_ids=None, all_ids=None, promoters=None, parameter
     threshold_table = threshold_table[indexes]
     other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
     if parameter == "enrichment":
-        set_scores, other_scores, genes = split_scores_by_gene_ids(all_results, set_ids, other_ids)
+        foreground_scores = np.array([i[1] for i in scaner(foreground, pwm)])
+        background_scores = np.array([i[1] for i in scaner(background, pwm)])
     elif parameter == "fraction":
-        set_scores, other_scores, genes = split_scores_by_gene_ids(best_results, set_ids, other_ids)
-    results = run_test(genes, set_scores, other_scores, threshold_table, parameter)
+        foreground_scores = np.array([i[1] for i in get_best_scores(scaner(foreground, pwm))])
+        background_scores = np.array([i[1] for i in get_best_scores(scaner(background, pwm))])
+    results = run_test_fasta(foreground_scores, background_scores, threshold_table, parameter)
     line.update(results)
     return line
 
 
-def set_case(path_to_set, path_to_db, output_dir, path_to_promoters, 
+def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, path_to_promoters, 
              file_format="meme", parameter="enrichment", number_of_cores=2):    
     print('-'*30)
-    print('Read SET of genes')
-    set_ids = read_set_of_genes(path_to_set)
+    print('Read fasta foreground and background')
+    foreground = fasta_parser(path_to_foreground)
+    background = fasta_parser(path_to_background)
     print('-'*30)
     print('Read promoters')
     promoters = promoters_parser(path_to_promoters)
@@ -47,7 +50,8 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
     with Pool(number_of_cores) as pool:
-        results = pool.map(partial(work_with_matrix, set_ids=set_ids, all_ids=all_ids, promoters=promoters, parameter=parameter), matrices)
+        results = pool.map(partial(work_with_matrix, foreground=foreground, background=background, 
+            promoters=promoters, parameter=parameter), matrices)
         results = list(results)
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"
