@@ -87,11 +87,13 @@ def main():
 
         this_dir, this_filename = os.path.split(__file__)
         if promoters == 'mm10':
-            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa.xz")
         elif promoters == 'hg38':
-            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa.xz")
+        elif promoters == 'tair10':
+            path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif promoters == 'rnor6':
-            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
             
         deg_case(path_to_deg, 
                  path_to_db,
@@ -118,11 +120,13 @@ def main():
     
         this_dir, this_filename = os.path.split(__file__)
         if promoters == 'mm10':
-            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa.xz")
         elif promoters == 'hg38':
-            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa.xz")
+        elif promoters == 'tair10':
+            path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif promoters == 'rnor6':
-            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
         set_case(path_to_set, 
                  path_to_db, 
                  output_dir, 
@@ -146,11 +150,13 @@ def main():
     
         this_dir, this_filename = os.path.split(__file__)
         if promoters == 'mm10':
-            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa.xz")
         elif promoters == 'hg38':
-            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa.xz")
+        elif promoters == 'tair10':
+            path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif promoters == 'rnor6':
-            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa")
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
         fasta_case(path_to_foreground,
                  path_to_background,
                  path_to_db, 

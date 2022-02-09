@@ -1,4 +1,5 @@
 import sys
+import lzma
 import numpy as np
 #import logomaker
 import matplotlib.pyplot as plt
@@ -105,8 +106,9 @@ def promoters_parser(path):
     container = []
     gname = ''
     seq = ''
-    with open(path) as file:
+    with lzma.open(path) as file:
         for line in file:
+            line = line.decode()
             if line.startswith('>'):
                 if not gname == '':
                     seq += complement(seq)
