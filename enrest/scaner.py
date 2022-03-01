@@ -7,7 +7,7 @@ def get_score_of_site(site, pwm, length):
     score = 0.
     for index in range(length):
         nuc = site[index]
-        if nuc <= 4:
+        if nuc < 4:
             score += pwm[nuc][index]
         else:
             score -= 100.
@@ -37,7 +37,7 @@ def get_scores_of_seq(seq, pwm, length, number_of_scores):
 def scaner(promoters, pwm):
     container = []
     length = pwm.shape[1]
-    number_of_scores = promoters[0][1].shape[0] / 2 - length + 1
+    number_of_scores = int(promoters[0][1].shape[0] / 2 - length + 1)
     for gname, seq in promoters:
         scores = get_scores_of_seq(seq, pwm, length, number_of_scores)
         container.append((gname, scores))

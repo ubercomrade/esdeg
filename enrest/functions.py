@@ -30,7 +30,7 @@ def get_all_scores(scan):
 def get_all_flatten_scores(scan):
     all_scores = get_all_scores(scan)
     all_scores = all_scores.ravel()
-    all_scores.sort()
+    all_scores.sort(kind="stable")
     all_scores = all_scores[::-1]
     return all_scores
 
