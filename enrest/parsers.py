@@ -119,6 +119,10 @@ def promoters_parser(path):
                 seq = ''
             else:
                 seq += line.strip().upper()
+        seq += complement(seq)
+        seq = np.array(seq, dtype='c')
+        seq = seq.view(np.uint8)
+        container.append((counter, actg_to_numbers(seq)))
     return container
 
 
@@ -139,6 +143,10 @@ def fasta_parser(path):
                 counter += 1
             else:
                 seq += line.strip().upper()
+        seq += complement(seq)
+        seq = np.array(seq, dtype='c')
+        seq = seq.view(np.uint8)
+        container.append((counter, actg_to_numbers(seq)))
     return container
 
 
