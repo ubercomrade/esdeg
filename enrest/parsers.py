@@ -122,7 +122,7 @@ def promoters_parser(path):
         seq += complement(seq)
         seq = np.array(seq, dtype='c')
         seq = seq.view(np.uint8)
-        container.append((counter, actg_to_numbers(seq)))
+        container.append((gname, actg_to_numbers(seq)))
     return container
 
 
