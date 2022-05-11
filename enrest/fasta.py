@@ -6,7 +6,7 @@ from functools import partial
 from enrest.functions import *
 from enrest.parsers import matrices_parser, fasta_parser, promoters_parser, read_set_of_genes
 from enrest.scaner import scaner
-import speedup as sup
+import enrest.speedup as sup
 
 
 def work_with_matrix(args, foreground=None, background=None, promoters=None, parameter=None):
