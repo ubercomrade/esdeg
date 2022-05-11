@@ -17,7 +17,7 @@ def work_with_matrix(args, all_ids=None, deg_table=None, promoters=None, paramet
     all_scores = scaner(promoters, pwm)
     best_scores = np.max(all_scores)
     flatten_scores = all_scores.ravel()
-    flatten_scores = sup.sort(flatten_scores)[::-1]
+    flatten_scores = sup.sort(flatten_scores)
     threshold_table = get_threshold(flatten_scores)
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
