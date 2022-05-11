@@ -34,13 +34,13 @@ def get_scores_of_seq(seq, pwm, length, number_of_scores):
     return scores
 
 
-@njit(float64[:,:](int64[:,:], float64[:,:]), parallel=True)
+@njit(float64[:,:](int64[:,:], float64[:,:]), parallel=False)
 def scaner(promoters, pwm):
     length = pwm.shape[1]
     number_of_promoters = promoters.shape[0]
     number_of_scores = (promoters.shape[1] // 2) - length + 1
     scores = np.zeros((number_of_promoters, number_of_scores * 2))
-    for index in prange(number_of_promoters):
+    for index in range(number_of_promoters):
         seq = promoters[index]
         scores[index] = get_scores_of_seq(seq, pwm, length, number_of_scores)
     return scores
