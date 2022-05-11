@@ -1,8 +1,6 @@
 import sys
 import lzma
 import numpy as np
-#import logomaker
-import matplotlib.pyplot as plt
 from numba import njit
 from operator import itemgetter
 
@@ -101,11 +99,11 @@ def matrices_parser(path, f="meme"):
     return container
 
 
-### PROMOTERS PART ###
+### PROMOTERS PART ### NEW
 def promoters_parser(path):
-    container = []
+    promoters = []
+    promoters_ids = []
     gname = ''
-    seq = ''
     with lzma.open(path) as file:
         for line in file:
             line = line.decode()
@@ -114,16 +112,17 @@ def promoters_parser(path):
                     seq += complement(seq)
                     seq = np.array(seq, dtype='c')
                     seq = seq.view(np.uint8)
-                    container.append((gname, actg_to_numbers(seq)))
+                    promoters.append(actg_to_numbers(seq))
+                    promoters_ids.append(gname)
                 gname = line.strip().split(':')[0][1:]
-                seq = ''
             else:
-                seq += line.strip().upper()
+                seq = line.strip().upper()
         seq += complement(seq)
         seq = np.array(seq, dtype='c')
         seq = seq.view(np.uint8)
-        container.append((gname, actg_to_numbers(seq)))
-    return container
+        promoters.append(actg_to_numbers(seq))
+        promoters_ids.append(gname)
+    return np.array(promoters), promoters_ids
 
 
 ### FASTA PART ###
@@ -182,43 +181,24 @@ def read_set_of_genes(path):
 
 
 ### PLOTS ###
-def plot_bs_distribution(set_scores, threshold_table, write_path, length=2000, window=20):
-    fig, ax = plt.subplots(figsize=(4, 2), dpi=200)
-    number_of_genes = len(set_scores)
-    for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
-        threshold, fpr = threshold_table[index]
-        distribution = np.sum(np.greater_equal(set_scores, threshold), axis=0)
-        add_zeros = int(length - len(distribution) // 2)
-        distribution = np.concatenate([distribution.reshape(2, len(distribution) // 2),
-                                       np.zeros(add_zeros * 2, dtype=np.int64).reshape(2, add_zeros)],
-                                      axis=1)
-        distribution[1] = distribution[1][::-1]
-        distribution = np.sum(distribution, axis=0)
-        distribution = np.sum(distribution.reshape(window, length // window), axis=0)
-        ax.plot(np.arange(len(distribution)), distribution / number_of_genes, label=level)
-        ax.set_xlim([0,len(distribution) - 1])
-        ax.axes.xaxis.set_visible(False)
-        ax.legend()
-    plt.savefig(write_path, format="jpg", dpi=200, bbox_inches='tight', pad_inches = 0.1)
-    plt.close()
-    pass
-
-
-# def plot_logo(pfm, write_path):
-#     bits = np.sum(pfm * np.log2(pfm / 0.25), axis=0)
-#     bits = bits * pfm
-#     bits_df = pd.DataFrame(bits.T)
-#     bits_df.columns = ['A', 'C', 'G', 'T']
-#     fig, ax = plt.subplots(figsize=(10, 2.5), dpi=200)
-#     ss_logo = logomaker.Logo(bits_df,
-#                              width=.9,
-#                              vpad=.02,
-#                              stack_order='big_on_top',
-#                              font_name='DejaVu Sans',
-#                              show_spines=False,
-#                              ax=ax)
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
+# def plot_bs_distribution(set_scores, threshold_table, write_path, length=2000, window=20):
+#     fig, ax = plt.subplots(figsize=(4, 2), dpi=200)
+#     number_of_genes = len(set_scores)
+#     for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
+#         threshold, fpr = threshold_table[index]
+#         distribution = np.sum(np.greater_equal(set_scores, threshold), axis=0)
+#         add_zeros = int(length - len(distribution) // 2)
+#         distribution = np.concatenate([distribution.reshape(2, len(distribution) // 2),
+#                                        np.zeros(add_zeros * 2, dtype=np.int64).reshape(2, add_zeros)],
+#                                       axis=1)
+#         distribution[1] = distribution[1][::-1]
+#         distribution = np.sum(distribution, axis=0)
+#         distribution = np.sum(distribution.reshape(window, length // window), axis=0)
+#         ax.plot(np.arange(len(distribution)), distribution / number_of_genes, label=level)
+#         ax.set_xlim([0,len(distribution) - 1])
+#         ax.axes.xaxis.set_visible(False)
+#         ax.legend()
 #     plt.savefig(write_path, format="jpg", dpi=200, bbox_inches='tight', pad_inches = 0.1)
 #     plt.close()
 #     pass
+

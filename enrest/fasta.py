@@ -6,16 +6,18 @@ from functools import partial
 from enrest.functions import *
 from enrest.parsers import matrices_parser, fasta_parser, promoters_parser, read_set_of_genes
 from enrest.scaner import scaner
+import speedup as sup
 
 
 def work_with_matrix(args, foreground=None, background=None, promoters=None, parameter=None):
     name, pwm, pfm, matrix_length, middle_score = args
     line = {('', 'ID'): name}
     print(f'{name}')
-    all_results = scaner(promoters, pwm)
-    best_results = get_best_scores(all_results)
-    all_scores_flatten = get_all_flatten_scores(all_results)
-    threshold_table = get_threshold(all_scores_flatten)
+    all_scores = scaner(promoters, pwm)
+    best_scores = np.max(all_scores)
+    flatten_scores = all_scores.ravel()
+    flatten_scores = sup.sort(flatten_scores)[::-1]
+    threshold_table = get_threshold(flatten_scores)
     threshold_table = np.array(threshold_table)
     fprs_table = threshold_table[:,1]
     fprs_choosen = np.array([0.0005, 0.00015, 0.00005]) # LOW, MIDDLE, HIGH
@@ -40,7 +42,7 @@ def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, p
     background = fasta_parser(path_to_background)
     print('-'*30)
     print('Read promoters')
-    promoters = promoters_parser(path_to_promoters)
+    promoters, all_ids = promoters_parser(path_to_promoters)
     all_ids = set([i[0] for i in promoters])
     print('-'*30)
     print('Read matrices')

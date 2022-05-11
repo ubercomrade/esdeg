@@ -6,35 +6,6 @@ from numba import njit, float64, int64
 from itertools import tee
 
 
-def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
-    
-
-def get_best_scores(scan):
-    container = []
-    for gname, s in scan:
-        container.append((gname, s.max()))
-    return container
-
-
-def get_all_scores(scan):
-    all_scores = np.zeros((len(scan), len(scan[0][1])))
-    for index, line in enumerate(scan):
-        all_scores[index] = line[1]
-    return all_scores
-
-
-def get_all_flatten_scores(scan):
-    all_scores = get_all_scores(scan)
-    all_scores = all_scores.ravel()
-    all_scores.sort(kind="stable")
-    all_scores = all_scores[::-1]
-    return all_scores
-
-
 def get_threshold(scores):
     container = []
     number_of_sites = len(scores)
@@ -51,18 +22,6 @@ def get_threshold(scores):
     return container
 
 
-# def calculate_fpr(n):
-#     if n == 0:
-#         return(0.0005)
-#     else:
-#         parameter = 1.5
-#         fpr = 0.0005
-#         for i in range(n):
-#             fpr = fpr / parameter
-#             parameter = 1 + parameter / 4 # old val = 2
-#         return(fpr)
-
-
 def calculate_fprs(min_fpr, n=3):
     container = []
     step = (np.log10(np.min(min_fpr)) - np.log10(0.0005)) / n
@@ -73,30 +32,21 @@ def calculate_fprs(min_fpr, n=3):
     return container
 
 
-def split_scores_by_gene_ids(scan_results, deg_ids, other_ids):
+def split_scores_by_gene_ids(scores, all_ids, deg_ids, other_ids):
     deg_scores = []
     other_scores = []
     exist = []
-    for gname, score in scan_results:
-        if gname in deg_ids:
-            exist.append(gname)
-            deg_scores.append(score)
-        elif gname in other_ids:
-            other_scores.append(score)
+    set_deg_ids = set(deg_ids)
+    set_other_ids = set(other_ids)
+    for index, i in enumerate(all_ids):
+        if i in set_deg_ids:
+            exist.append(i)
+            deg_scores.append(scores[index])
+        elif i in set_other_ids:
+            other_scores.append(scores[index])
         else:
             continue
     return np.array(deg_scores), np.array(other_scores), exist
-
-
-# def fisher_test(deg_scores, other_scores, threshold):
-#     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-#     number_of_deg_without_tfbs = len(deg_scores) - number_of_deg_with_tfbs
-#     number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
-#     number_of_other_without_tfbs = len(other_scores) - number_of_other_with_tfbs
-#     table = [[number_of_deg_with_tfbs, number_of_other_with_tfbs],
-#         [number_of_deg_without_tfbs, number_of_other_without_tfbs]]
-#     oddsr, fisher_pval = stats.fisher_exact(table, alternative='two-sided') # {‘two-sided’, ‘less’, ‘greater’}
-#     return fisher_pval
 
 
 @njit(cache=True)
@@ -104,15 +54,11 @@ def calculate_enrichment(scores, threshold):
     counts = np.sum(np.greater_equal(scores, threshold))
     total = scores.shape[0] * scores.shape[1]
     enrichment = counts / total
-    if enrichment == 0:
+    if enrichment == 0.0:
         enrichment = 10**(-6)
     return enrichment
 
 
-# def promoters_with_sites(scores, threshold):
-#     counts = np.greater_equal(scores, threshold)
-
-# MONTECARLO APPROACH
 @njit(cache=True)
 def montecarlo_enrichment(deg_scores, other_scores, threshold):
     real_enrichmnet = calculate_enrichment(deg_scores, threshold)
@@ -145,102 +91,6 @@ def montecarlo_fraction(deg_scores, other_scores, threshold):
     z_score = abs((real_fraction - random_fraction_mean) / random_fraction_std)
     #print(real_fraction, random_fraction_mean, real_fraction / random_fraction_mean)
     return z_score, np.log2(real_fraction / random_fraction_mean)
-
-
-# BINOMTEST APPROACH
-# def stat_tests_enrichment(deg_scores, other_scores, threshold, method='binom'):
-#     number_of_sites_upper_score_in_deg = np.sum(np.greater_equal(deg_scores, threshold))
-#     total_namber_of_sites_in_deg = deg_scores.shape[0] * deg_scores.shape[1]
-#     number_of_sites_upper_score_in_other = np.sum(np.greater_equal(other_scores, threshold))
-#     total_namber_of_sites_in_other = other_scores.shape[0] * other_scores.shape[1]
-#     prob = number_of_sites_upper_score_in_other / total_namber_of_sites_in_other
-#     # print(total_namber_of_sites_in_deg, number_of_sites_upper_score_in_deg,
-#     #      total_namber_of_sites_in_other, number_of_sites_upper_score_in_other)
-#     if method == 'binom':
-#         res = stats.binomtest(number_of_sites_upper_score_in_deg,
-#                            total_namber_of_sites_in_deg,
-#                            p=prob)
-#         pvalue = res.pvalue
-#     elif method == 'hypergeom':
-#         pvalue = stats.hypergeom.sf(number_of_sites_upper_score_in_deg,
-#                                   total_namber_of_sites_in_other,
-#                                   number_of_sites_upper_score_in_other,
-#                                   total_namber_of_sites_in_deg)
-#     else:
-#         sys.exit("Wrong method! Goodby!")
-#     return pvalue
-
-
-# def stat_tests_fraction(deg_scores, other_scores, threshold, method='binom'):
-#     number_of_deg = len(deg_scores)
-#     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-#     number_of_other = len(other_scores)
-#     number_of_other_with_tfbs = np.sum(np.greater_equal(other_scores, threshold))
-#     prob = number_of_other_with_tfbs / number_of_other
-#     #print(number_of_deg, number_of_deg_with_tfbs, number_of_other, number_of_other_with_tfbs)
-#     if method == 'binom':
-#         res = stats.binomtest(number_of_deg_with_tfbs,
-#                            number_of_deg,
-#                            p=prob)
-#         pvalue = res.pvalue
-#     elif method == 'hypergeom':
-#         pvalue = stats.hypergeom.sf(number_of_deg_with_tfbs,
-#                                   number_of_other,
-#                                   number_of_other_with_tfbs,
-#                                   number_of_deg)
-#     else:
-#         sys.exit("Wrong method! Goodby!")
-#     return pvalue
- 
-
-#ANOTHER MONTECARLO APPROACH
-# @njit(fastmath=True)
-# def calculate_enrichment(scores, threshold_min, threshold_max):
-#     counts = np.sum(np.logical_and(np.greater_equal(scores, threshold_min),
-#                                    np.less(scores, threshold_max)))
-#     total = scores.shape[0] * scores.shape[1]
-#     enrichment = counts / total
-#     if enrichment == 0:
-#         enrichment = 10**(-6)
-#     return enrichment
-
-
-# @njit(cache=True)
-# def montecarlo_enrichment(deg_scores, other_scores, threshold_min, threshold_max):
-#     real_enrichmnet = calculate_enrichment(deg_scores, threshold_min, threshold_max)
-#     number_of_deg = len(deg_scores)
-#     indexes = np.arange(len(other_scores))
-#     vec_random_enrichment = np.zeros(1000)
-#     for i in range(1000):
-#         sample_indexes = np.random.choice(indexes, number_of_deg)
-#         sample = other_scores[sample_indexes]
-#         vec_random_enrichment[i] = calculate_enrichment(sample, threshold_min, threshold_max)
-#     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
-#     z_score = (real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std
-#     return z_score
-
-    
-# @njit(cache=True)
-# def montecarlo_fraction(deg_scores, other_scores, threshold_min, threshold_max):
-#     number_of_deg = len(deg_scores)
-#     number_of_deg_with_tfbs = np.sum(np.logical_and(np.greater_equal(deg_scores, threshold_min),
-#                                                    np.less(deg_scores, threshold_max)))
-#     real_fraction = number_of_deg_with_tfbs / number_of_deg
-#     if real_fraction == 0:
-#         real_fraction = 10**(-6)
-#     indexes = np.arange(len(other_scores))
-#     vec_random_fraction = np.zeros(1000, dtype=np.float64)
-#     for i in range(1000):
-#         sample_indexes = np.random.choice(indexes, number_of_deg)
-#         sample = other_scores[sample_indexes]
-#         number_of_other_with_tfbs = np.sum(np.logical_and(np.greater_equal(sample, threshold_min),
-#                                                    np.less(sample, threshold_max)))
-#         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
-#     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-#     if random_fraction_mean == 0:
-#         random_fraction_mean = 10**(-6)
-#     z_score = (real_fraction - random_fraction_mean) / random_fraction_std
-#     return z_score
 
 
 def hartung(p):

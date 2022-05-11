@@ -2,12 +2,20 @@
 """kek"""
 from setuptools import setup
 
+try:
+    from pythran.dist import PythranExtension, PythranBuildExt
+    setup_args = {
+        'cmdclass': {"build_ext": PythranBuildExt},
+        'ext_modules': [PythranExtension('enrest.speedup', sources = ['enrest/speedup.py'])],
+    }
+except ImportError:
+    print("Not building Pythran extension")
+    setup_args = {}
+    
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy']
-
-
+install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy', 'pythran']
 setup(
     name='enREST',
     version='0.0.1',
@@ -37,4 +45,4 @@ setup(
     install_requires=install_requires,
     setup_requires=install_requires,
     python_requires='>=3.7',
-)
+    **setup_args)
