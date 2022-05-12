@@ -14,7 +14,7 @@ def work_with_matrix(args, foreground=None, background=None, promoters=None, par
     line = {('', 'ID'): name}
     print(f'{name}')
     all_scores = scaner(promoters, pwm)
-    best_scores = np.max(all_scores)
+    best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
     threshold_table = get_threshold(flatten_scores)
@@ -24,11 +24,11 @@ def work_with_matrix(args, foreground=None, background=None, promoters=None, par
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     if parameter == "enrichment":
-        foreground_scores = np.array([i[1] for i in scaner(foreground, pwm)])
-        background_scores = np.array([i[1] for i in scaner(background, pwm)])
+        foreground_scores = scaner(foreground, pwm)
+        background_scores = scaner(background, pwm)
     elif parameter == "fraction":
-        foreground_scores = np.array([i[1] for i in get_best_scores(scaner(foreground, pwm))])
-        background_scores = np.array([i[1] for i in get_best_scores(scaner(background, pwm))])
+        foreground_scores = np.max(scaner(foreground, pwm), axis=1)
+        background_scores = np.max(scaner(background, pwm), axis=1)
     results = run_test_fasta(foreground_scores, background_scores, threshold_table, parameter)
     line.update(results)
     return line

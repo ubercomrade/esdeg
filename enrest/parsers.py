@@ -107,46 +107,30 @@ def promoters_parser(path):
     with lzma.open(path) as file:
         for line in file:
             line = line.decode()
-            if line.startswith('>'):
-                if not gname == '':
-                    seq += complement(seq)
-                    seq = np.array(seq, dtype='c')
-                    seq = seq.view(np.uint8)
-                    promoters.append(actg_to_numbers(seq))
-                    promoters_ids.append(gname)
-                gname = line.strip().split(':')[0][1:]
-            else:
+            if not line.startswith('>'):
                 seq = line.strip().upper()
-        seq += complement(seq)
-        seq = np.array(seq, dtype='c')
-        seq = seq.view(np.uint8)
-        promoters.append(actg_to_numbers(seq))
-        promoters_ids.append(gname)
+                seq += complement(seq)
+                seq = np.array(seq, dtype='c')
+                seq = seq.view(np.uint8)
+                promoters.append(actg_to_numbers(seq))
+                promoters_ids.append(gname)
+            else:
+                gname = line.strip().split(':')[0][1:]
     return np.array(promoters), promoters_ids
 
 
 ### FASTA PART ###
 def fasta_parser(path):
     container = []
-    seq = ''
-    counter = 0
     with open(path) as file:
         for line in file:
-            if line.startswith('>'):
-                if counter != 0:
-                    seq += complement(seq)
-                    seq = np.array(seq, dtype='c')
-                    seq = seq.view(np.uint8)
-                    container.append((counter, actg_to_numbers(seq)))
-                seq = ''
-                counter += 1
-            else:
-                seq += line.strip().upper()
-        seq += complement(seq)
-        seq = np.array(seq, dtype='c')
-        seq = seq.view(np.uint8)
-        container.append((counter, actg_to_numbers(seq)))
-    return container
+            if not line.startswith('>'):
+                seq = line.strip().upper()
+                seq += complement(seq)
+                seq = np.array(seq, dtype='c')
+                seq = seq.view(np.uint8)
+                container.append(actg_to_numbers(seq))
+    return np.array(container)
 
 
 @njit(cache=True)

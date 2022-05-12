@@ -15,7 +15,7 @@ def work_with_matrix(args, all_ids=None, deg_table=None, promoters=None, paramet
     print(f'{name}')
     container = {'ALL': [], 'UP': [], 'DOWN': []}
     all_scores = scaner(promoters, pwm)
-    best_scores = np.max(all_scores)
+    best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
     threshold_table = get_threshold(flatten_scores)

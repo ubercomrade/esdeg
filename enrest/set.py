@@ -14,7 +14,7 @@ def work_with_matrix(args, set_ids=None, all_ids=None, promoters=None, parameter
     line = {('', 'ID'): name}
     print(f'{name}')
     all_scores = scaner(promoters, pwm)
-    best_scores = np.max(all_scores)
+    best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
     threshold_table = get_threshold(flatten_scores)

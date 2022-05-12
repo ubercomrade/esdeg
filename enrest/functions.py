@@ -133,7 +133,7 @@ def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
 
 
 def get_other_gene_ids_for_set_case(set_ids, all_ids):
-    gene_ids = all_ids - set_ids
+    gene_ids = set(all_ids) - set(set_ids)
     return gene_ids
 
 
