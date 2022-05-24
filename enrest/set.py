@@ -43,6 +43,7 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
+    results = []
     for matrix_data in matrices:
         name, pwm, pfm, matrix_length = matrix_data
         line = work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter)
