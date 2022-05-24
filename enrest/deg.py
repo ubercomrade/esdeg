@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from enrest.functions import run_test
+from enrest.functions import run_test, get_threshold
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
 import enrest.speedup as sup
 
