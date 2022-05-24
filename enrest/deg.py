@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from enrest.functions import run_test, get_threshold
+from enrest.functions import run_test, get_threshold, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_scores_by_gene_ids
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
 import enrest.speedup as sup
 
