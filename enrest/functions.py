@@ -2,9 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.stats import norm, chi2
-from numba import njit, float64, int64
 from itertools import tee
-
+from enrest.speedup import montecarlo_enrichment, montecarlo_fraction
 
 def get_threshold(scores):
     container = []
@@ -47,50 +46,6 @@ def split_scores_by_gene_ids(scores, all_ids, deg_ids, other_ids):
         else:
             continue
     return np.array(deg_scores), np.array(other_scores), exist
-
-
-@njit(cache=True)
-def calculate_enrichment(scores, threshold):
-    counts = np.sum(np.greater_equal(scores, threshold))
-    total = scores.shape[0] * scores.shape[1]
-    enrichment = counts / total
-    if enrichment == 0.0:
-        enrichment = 10**(-6)
-    return enrichment
-
-
-@njit(cache=True)
-def montecarlo_enrichment(deg_scores, other_scores, threshold):
-    real_enrichmnet = calculate_enrichment(deg_scores, threshold)
-    number_of_deg = len(deg_scores)
-    indexes = np.arange(len(other_scores))
-    vec_random_enrichment = np.zeros(1000)
-    for i in range(1000):
-        sample_indexes = np.random.choice(indexes, number_of_deg)
-        sample = other_scores[sample_indexes]
-        vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
-    random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
-    z_score = abs((real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std)
-    #print(real_enrichmnet, random_enrichmnet_mean, real_enrichmnet / random_enrichmnet_mean)
-    return z_score, np.log2(real_enrichmnet / random_enrichmnet_mean)
-
-
-@njit(cache=True)
-def montecarlo_fraction(deg_scores, other_scores, threshold):
-    number_of_deg = len(deg_scores)
-    number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
-    real_fraction = number_of_deg_with_tfbs / number_of_deg
-    indexes = np.arange(len(other_scores))
-    vec_random_fraction = np.zeros(1000, dtype=np.float64)
-    for i in range(1000):
-        sample_indexes = np.random.choice(indexes, number_of_deg)
-        sample = other_scores[sample_indexes]
-        number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
-        vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
-    random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-    z_score = abs((real_fraction - random_fraction_mean) / random_fraction_std)
-    #print(real_fraction, random_fraction_mean, real_fraction / random_fraction_mean)
-    return z_score, np.log2(real_fraction / random_fraction_mean)
 
 
 def hartung(p):

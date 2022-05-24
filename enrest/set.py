@@ -1,19 +1,15 @@
 import pandas as pd
 import numpy as np
-from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from functools import partial
-from enrest.functions import *
+from enrest.functions import run_test
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
-from enrest.scaner import scaner
 import enrest.speedup as sup
 
 
-def work_with_matrix(args, set_ids=None, all_ids=None, promoters=None, parameter=None):
-    name, pwm, pfm, matrix_length, middle_score = args
+
+def work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter):
     line = {('', 'ID'): name}
     print(f'{name}')
-    all_scores = scaner(promoters, pwm)
+    all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
@@ -47,9 +43,11 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
-    with Pool(number_of_cores) as pool:
-        results = pool.map(partial(work_with_matrix, set_ids=set_ids, all_ids=all_ids, promoters=promoters, parameter=parameter), matrices)
-        results = list(results)
+    for matrix_data in matrices:
+        name, pwm, pfm, matrix_length = matrix_data
+        threshold_table = np.load(f'{path_to_tt}/{name}.npy')
+        line = work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter)
+        results.append(line)
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"
     df.to_csv(output_path, sep='\t', index=False)

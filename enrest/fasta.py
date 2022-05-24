@@ -1,19 +1,14 @@
 import pandas as pd
 import numpy as np
-from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from functools import partial
-from enrest.functions import *
+from enrest.functions import run_test_fasta
 from enrest.parsers import matrices_parser, fasta_parser, promoters_parser, read_set_of_genes
-from enrest.scaner import scaner
 import enrest.speedup as sup
 
 
-def work_with_matrix(args, foreground=None, background=None, promoters=None, parameter=None):
-    name, pwm, pfm, matrix_length, middle_score = args
+def work_with_matrix(name, pwm, pfm, matrix_length, foreground, background, promoters, parameter):
     line = {('', 'ID'): name}
     print(f'{name}')
-    all_scores = scaner(promoters, pwm)
+    all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
@@ -24,11 +19,11 @@ def work_with_matrix(args, foreground=None, background=None, promoters=None, par
     indexes = np.searchsorted(fprs_table, fprs_choosen)
     threshold_table = threshold_table[indexes]
     if parameter == "enrichment":
-        foreground_scores = scaner(foreground, pwm)
-        background_scores = scaner(background, pwm)
+        foreground_scores = sup.scaner(foreground, pwm)
+        background_scores = sup.scaner(background, pwm)
     elif parameter == "fraction":
-        foreground_scores = np.max(scaner(foreground, pwm), axis=1)
-        background_scores = np.max(scaner(background, pwm), axis=1)
+        foreground_scores = np.max(sup.scaner(foreground, pwm), axis=1)
+        background_scores = np.max(sup.scaner(background, pwm), axis=1)
     results = run_test_fasta(foreground_scores, background_scores, threshold_table, parameter)
     line.update(results)
     return line
@@ -50,10 +45,12 @@ def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, p
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
-    with Pool(number_of_cores) as pool:
-        results = pool.map(partial(work_with_matrix, foreground=foreground, background=background, 
-            promoters=promoters, parameter=parameter), matrices)
-        results = list(results)
+    for matrix_data in matrices:
+        name, pwm, pfm, matrix_length = matrix_data
+        threshold_table = np.load(f'{path_to_tt}/{name}.npy')
+        line = work_with_matrix(name, pwm, pfm, matrix_length, 
+                         foreground, background, promoters, parameter)
+        results.append(line)
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"
     df.to_csv(output_path, sep='\t', index=False)

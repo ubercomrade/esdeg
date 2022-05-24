@@ -15,7 +15,7 @@ except ImportError:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'numba', 'numpy', 'scipy', 'pythran']
+install_requires = ['setuptools>=18.0', 'numpy', 'scipy', 'pythran']
 setup(
     name='enREST',
     version='0.0.1',
@@ -38,6 +38,8 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering :: Bio-Informatics"
     ],
     zip_safe=False,

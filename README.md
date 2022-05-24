@@ -7,10 +7,10 @@ We developed approach that help to find TF plaing role in DEG.
 
   * numpy
   * scipy
-  * numba
+  * pythran
 
-  You can use pip to install dependences `pip install numpy, scipy, numba`,
-  Or you can use conda `conda install numpy, scipy, numba`
+  You can use pip to install dependences `pip install numpy, scipy, pythran`,
+  Or you can use conda `conda install numpy, scipy, pythran`
 
 ## Installation
 

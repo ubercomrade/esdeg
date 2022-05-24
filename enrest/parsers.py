@@ -1,11 +1,9 @@
 import sys
 import lzma
 import numpy as np
-from numba import njit
 from operator import itemgetter
+from enrest.speedup import work_with_seq
 
-
-### MATRIX PART ###
 def read_list_of_matrix_hocomoco(path):
     container = []
     matrix = []
@@ -94,12 +92,10 @@ def matrices_parser(path, f="meme"):
         pfm = pcm_to_pfm(pcm)
         pwm = pfm_to_pwm(pfm)
         matrix_length = pwm.shape[1]
-        middle_score = to_score(pwm, 0.6)
-        container.append([name, pwm, pfm, matrix_length, middle_score])
+        container.append([name, pwm, pfm, matrix_length])
     return container
 
 
-### PROMOTERS PART ### NEW
 def promoters_parser(path):
     promoters = []
     promoters_ids = []
@@ -108,81 +104,27 @@ def promoters_parser(path):
         for line in file:
             line = line.decode()
             if not line.startswith('>'):
-                seq = line.strip().upper()
-                seq += complement(seq)
-                seq = np.array(seq, dtype='c')
-                seq = seq.view(np.uint8)
-                promoters.append(actg_to_numbers(seq))
+                seq = work_with_seq(line)
+                promoters.append(seq)
                 promoters_ids.append(gname)
             else:
                 gname = line.strip().split(':')[0][1:]
     return np.array(promoters), promoters_ids
 
 
-### FASTA PART ###
 def fasta_parser(path):
     container = []
     with open(path) as file:
         for line in file:
             if not line.startswith('>'):
-                seq = line.strip().upper()
-                seq += complement(seq)
-                seq = np.array(seq, dtype='c')
-                seq = seq.view(np.uint8)
-                container.append(actg_to_numbers(seq))
+                seq = work_with_seq(line)
+                container.append(seq)
     return np.array(container)
 
-
-@njit(cache=True)
-def actg_to_numbers(seq):
-    length = len(seq)
-    vec = np.zeros(length, dtype=np.int64)
-    for index in range(length):
-        if seq[index] == 65:
-            vec[index] = 0
-        elif seq[index] == 67:
-            vec[index] = 1
-        elif seq[index] == 71:
-            vec[index] = 2
-        elif seq[index] == 84:
-            vec[index] = 3
-        else:
-            vec[index] = 4
-    return vec
     
-    
-def complement(seq):
-    return seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper()[::-1]
-
-
-### SET GENES ###
 def read_set_of_genes(path):
     container = []
     with open(path) as file:
         for line in file:
             container.append(line.strip())
     return set(container)
-
-
-### PLOTS ###
-# def plot_bs_distribution(set_scores, threshold_table, write_path, length=2000, window=20):
-#     fig, ax = plt.subplots(figsize=(4, 2), dpi=200)
-#     number_of_genes = len(set_scores)
-#     for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
-#         threshold, fpr = threshold_table[index]
-#         distribution = np.sum(np.greater_equal(set_scores, threshold), axis=0)
-#         add_zeros = int(length - len(distribution) // 2)
-#         distribution = np.concatenate([distribution.reshape(2, len(distribution) // 2),
-#                                        np.zeros(add_zeros * 2, dtype=np.int64).reshape(2, add_zeros)],
-#                                       axis=1)
-#         distribution[1] = distribution[1][::-1]
-#         distribution = np.sum(distribution, axis=0)
-#         distribution = np.sum(distribution.reshape(window, length // window), axis=0)
-#         ax.plot(np.arange(len(distribution)), distribution / number_of_genes, label=level)
-#         ax.set_xlim([0,len(distribution) - 1])
-#         ax.axes.xaxis.set_visible(False)
-#         ax.legend()
-#     plt.savefig(write_path, format="jpg", dpi=200, bbox_inches='tight', pad_inches = 0.1)
-#     plt.close()
-#     pass
-

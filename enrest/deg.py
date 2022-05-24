@@ -1,20 +1,15 @@
 import pandas as pd
 import numpy as np
-from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from functools import partial
-from enrest.functions import *
+from enrest.functions import run_test
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
-from enrest.scaner import scaner
 import enrest.speedup as sup
 
 
-def work_with_matrix(args, all_ids=None, deg_table=None, promoters=None, parameter=None, 
-    padj_thr=None, log2fc_thr_deg=None, log2fc_thr_background=None):
-    name, pwm, pfm, matrix_length, middle_score = args
+def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoters, parameter, 
+    padj_thr, log2fc_thr_deg, log2fc_thr_background):
     print(f'{name}')
     container = {'ALL': [], 'UP': [], 'DOWN': []}
-    all_scores = scaner(promoters, pwm)
+    all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
     flatten_scores = sup.sort(flatten_scores)
@@ -54,10 +49,14 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     number_of_matrices = len(matrices)
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
-    with Pool(number_of_cores) as pool:
-        results = pool.map(partial(work_with_matrix, all_ids=all_ids, deg_table=deg_table, promoters=promoters, parameter=parameter,
-            padj_thr=padj_thr, log2fc_thr_deg=log2fc_thr_deg, log2fc_thr_background=log2fc_thr_background), matrices)
-        results = list(results)
+    results = []
+    for matrix_data in matrices:
+        name, pwm, pfm, matrix_length = matrix_data
+        line = work_with_matrix(name, pwm, pfm, matrix_length, 
+                         all_ids, deg_table, 
+                         promoters, parameter, padj_thr, 
+                         log2fc_thr_deg, log2fc_thr_background)
+        results.append(line)
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         container = [i[condition] for i in results]
         df = pd.DataFrame(container, columns=container[0].keys())
