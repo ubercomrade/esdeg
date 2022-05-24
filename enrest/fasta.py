@@ -47,7 +47,6 @@ def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, p
     print('-'*30)
     for matrix_data in matrices:
         name, pwm, pfm, matrix_length = matrix_data
-        threshold_table = np.load(f'{path_to_tt}/{name}.npy')
         line = work_with_matrix(name, pwm, pfm, matrix_length, 
                          foreground, background, promoters, parameter)
         results.append(line)

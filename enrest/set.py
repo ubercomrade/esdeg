@@ -45,7 +45,6 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     print('-'*30)
     for matrix_data in matrices:
         name, pwm, pfm, matrix_length = matrix_data
-        threshold_table = np.load(f'{path_to_tt}/{name}.npy')
         line = work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter)
         results.append(line)
     df = pd.DataFrame(results, columns=results[0].keys())
