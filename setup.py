@@ -15,7 +15,7 @@ except ImportError:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'numpy', 'scipy', 'pythran']
+install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy', 'pythran']
 setup(
     name='enREST',
     version='0.0.1',
