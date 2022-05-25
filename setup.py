@@ -6,8 +6,7 @@ try:
     from pythran.dist import PythranExtension, PythranBuildExt
     setup_args = {
         'cmdclass': {"build_ext": PythranBuildExt},
-        'ext_modules': [PythranExtension('enrest.speedup', sources = ['enrest/speedup.py'], extra_compile_args=["-O3", "-ffast-math", "-mfpmath=sse", "-march=native",
-                     "-funroll-loops", "-std=c++11", "-fno-math-errno", "-w", "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD"])],
+        'ext_modules': [PythranExtension('enrest.speedup', sources = ['enrest/speedup.py'], extra_compile_args=["-Ofast", "-march=native", "-DUSE_XSIMD"])],
     }
 except ImportError:
     print("Not building Pythran extension")
