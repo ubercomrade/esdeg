@@ -8,8 +8,7 @@ time enREST.py deg \
 hg38 \
 ./ovol1.montecarlo.enrichment \
 --parameter enrichment \
---format hocomoco \
--c 3
+--format hocomoco 
 
 time enREST.py deg \
 ./E-GEOD-48230-query-results.csv \
@@ -17,8 +16,7 @@ time enREST.py deg \
 hg38 \
 ./ovol1.montecarlo.fraction \
 --parameter fraction \
---format hocomoco \
--c 3
+--format hocomoco
 
 
 time enREST.py set \
@@ -27,8 +25,7 @@ time enREST.py set \
 hg38 \
 ./nfkb1.montecarlo.enrichment \
 --parameter enrichment \
---format hocomoco \
--c 4
+--format hocomoco 
 
 
 time enREST.py set \
@@ -37,8 +34,7 @@ time enREST.py set \
 hg38 \
 ./nfkb1.montecarlo.fraction \
 --parameter fraction \
---format hocomoco \
--c 4
+--format hocomoco 
 
 
 time enREST.py fasta \
@@ -48,8 +44,7 @@ time enREST.py fasta \
 tair10 \
 ./tair10.montecarlo.enrichment \
 --parameter enrichment \
---format meme \
--c 4
+--format meme 
 
 
 time enREST.py fasta \
@@ -59,5 +54,4 @@ time enREST.py fasta \
 tair10 \
 ./tair10.montecarlo.fraction \
 --parameter fraction \
---format meme \
--c 4
+--format meme 

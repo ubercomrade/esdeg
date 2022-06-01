@@ -30,7 +30,7 @@ def work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters,
 
 
 def set_case(path_to_set, path_to_db, output_dir, path_to_promoters, 
-             file_format="meme", parameter="enrichment", number_of_cores=2):    
+             file_format="meme", parameter="enrichment"):    
     print('-'*30)
     print('Read SET of genes')
     set_ids = read_set_of_genes(path_to_set)

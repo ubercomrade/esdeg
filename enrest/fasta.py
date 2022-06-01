@@ -30,7 +30,7 @@ def work_with_matrix(name, pwm, pfm, matrix_length, foreground, background, prom
 
 
 def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, path_to_promoters, 
-             file_format="meme", parameter="enrichment", number_of_cores=2):    
+             file_format="meme", parameter="enrichment"):    
     print('-'*30)
     print('Read fasta foreground and background')
     foreground = fasta_parser(path_to_foreground)

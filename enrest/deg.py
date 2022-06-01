@@ -35,7 +35,7 @@ def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoter
 
 def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters, 
              file_format='meme', parameter='enrichment', padj_thr=0.05,
-             log2fc_thr_deg=1, log2fc_thr_background=np.log2(5/4), number_of_cores=2):    
+             log2fc_thr_deg=1, log2fc_thr_background=np.log2(5/4)):    
     print('-'*30)
     print('Read DEG table')
     deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
