@@ -7,7 +7,6 @@ import enrest.speedup as sup
 
 def work_with_matrix(name, pwm, pfm, matrix_length, foreground, background, promoters, parameter):
     line = {('', 'ID'): name}
-    print(f'{name}')
     all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
     flatten_scores = all_scores.ravel()
@@ -46,8 +45,9 @@ def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, p
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
     results = []
-    for matrix_data in matrices:
+    for index, matrix_data in enumerate(matrices, start=1):
         name, pwm, pfm, matrix_length = matrix_data
+        print(f'{index}. {name}')
         line = work_with_matrix(name, pwm, pfm, matrix_length, 
                          foreground, background, promoters, parameter)
         results.append(line)

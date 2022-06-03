@@ -7,7 +7,6 @@ import enrest.speedup as sup
 
 def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoters, parameter, 
     padj_thr, log2fc_thr_deg, log2fc_thr_background):
-    print(f'{name}')
     container = {'ALL': [], 'UP': [], 'DOWN': []}
     all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
@@ -50,8 +49,9 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
     results = []
-    for matrix_data in matrices:
+    for index, matrix_data in enumerate(matrices, start=1):
         name, pwm, pfm, matrix_length = matrix_data
+        print(f'{index}. {name}')
         line = work_with_matrix(name, pwm, pfm, matrix_length, 
                          all_ids, deg_table, 
                          promoters, parameter, padj_thr, 
