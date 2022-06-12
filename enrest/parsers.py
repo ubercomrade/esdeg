@@ -101,13 +101,6 @@ def complement(seq):
     return seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper()[::-1]
 
 
-def calculate_gc(sequences):
-    length = sequences.shape[1]
-    gc = np.sum(np.logical_or(sequences == 1, sequences == 2), axis=1)
-    gc = gc / length
-    return gc
-
-
 def promoters_parser(path):
     container = []
     gname = ''

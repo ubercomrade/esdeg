@@ -5,6 +5,14 @@ from scipy.stats import norm, chi2
 from itertools import tee
 from enrest.speedup import montecarlo_enrichment, montecarlo_fraction
 
+
+def calculate_gc(sequences):
+    length = sequences.shape[1]
+    gc = np.sum(np.logical_or(sequences == 1, sequences == 2), axis=1)
+    gc = gc / length
+    return gc
+
+
 def get_threshold(scores):
     container = []
     number_of_sites = len(scores)
