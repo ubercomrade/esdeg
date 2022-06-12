@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
-from enrest.functions import run_test_fasta, get_threshold
+from enrest.functions import run_test_fasta, get_threshold, calculate_gc
 from enrest.parsers import matrices_parser, fasta_parser, promoters_parser, read_set_of_genes
 import enrest.speedup as sup
 
 
-def work_with_matrix(name, pwm, pfm, matrix_length, foreground, background, promoters, parameter):
+def work_with_matrix(name, pwm, pfm, matrix_length, 
+                     foreground, foreground_gc,
+                     background, background_gc, 
+                     promoters, parameter, gc_threshold):
     line = {('', 'ID'): name}
     print(f'{name}')
     all_scores = sup.scaner(promoters, pwm)
@@ -24,21 +27,28 @@ def work_with_matrix(name, pwm, pfm, matrix_length, foreground, background, prom
     elif parameter == "fraction":
         foreground_scores = np.max(sup.scaner(foreground, pwm), axis=1)
         background_scores = np.max(sup.scaner(background, pwm), axis=1)
-    results = run_test_fasta(foreground_scores, background_scores, threshold_table, parameter)
+    results = run_test_fasta(foreground_scores, foreground_gc,
+                             background_scores, background_gc,
+                             threshold_table, gc_threshold, parameter)
     line.update(results)
     return line
 
 
 def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, path_to_promoters, 
-             file_format="meme", parameter="enrichment"):    
+             file_format="meme", parameter="enrichment", gc_threshold=0.1):    
     print('-'*30)
     print('Read fasta foreground and background')
     foreground = fasta_parser(path_to_foreground)
+    foreground = sup.seq_to_int(foreground)
+    foreground_gc = calculate_gc(foreground)
+    
     background = fasta_parser(path_to_background)
+    background = sup.seq_to_int(background)
+    background_gc = calculate_gc(background)
     print('-'*30)
     print('Read promoters')
     promoters, all_ids = promoters_parser(path_to_promoters)
-    all_ids = set([i[0] for i in promoters])
+    promoters = sup.seq_to_int(promoters)
     print('-'*30)
     print('Read matrices')
     matrices = matrices_parser(path_to_db, f=file_format)
@@ -49,7 +59,9 @@ def fasta_case(path_to_foreground, path_to_background, path_to_db, output_dir, p
     for matrix_data in matrices:
         name, pwm, pfm, matrix_length = matrix_data
         line = work_with_matrix(name, pwm, pfm, matrix_length, 
-                         foreground, background, promoters, parameter)
+                     foreground, foreground_gc,
+                     background, background_gc, 
+                     promoters, parameter, gc_threshold)
         results.append(line)
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"

@@ -1,13 +1,12 @@
 import pandas as pd
 import numpy as np
-from enrest.functions import run_test, get_threshold, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_scores_by_gene_ids
+from enrest.functions import run_test, get_threshold, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_scores_by_gene_ids, calculate_gc
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
 import enrest.speedup as sup
 
 
-def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoters, parameter, 
-    padj_thr, log2fc_thr_deg, log2fc_thr_background):
-    print(f'{name}')
+def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoters, gc_content, parameter, 
+    padj_thr, log2fc_thr_deg, log2fc_thr_background, gc_threshold):
     container = {'ALL': [], 'UP': [], 'DOWN': []}
     all_scores = sup.scaner(promoters, pwm)
     best_scores = np.max(all_scores, axis=1)
@@ -24,10 +23,18 @@ def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoter
         deg_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
         other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
         if parameter == "enrichment":
-            deg_scores, other_scores, genes = split_scores_by_gene_ids(all_scores, all_ids, deg_ids, other_ids)
+            deg_scores, deg_gc, other_scores, other_gc, genes = split_scores_by_gene_ids(all_scores,
+                                                                                         gc_content,
+                                                                                         np.array(all_ids),
+                                                                                         deg_ids,
+                                                                                         other_ids)
         elif parameter == "fraction":
-            deg_scores, other_scores, genes = split_scores_by_gene_ids(best_scores, all_ids, deg_ids, other_ids)
-        results = run_test(genes, deg_scores, other_scores, threshold_table, parameter)
+            deg_scores, deg_gc, other_scores, other_gc, genes = split_scores_by_gene_ids(best_scores,
+                                                                                         gc_content,
+                                                                                         np.array(all_ids),
+                                                                                         deg_ids, 
+                                                                                         other_ids)
+        results = run_test(genes, deg_scores, deg_gc, other_scores, other_gc, threshold_table, gc_threshold, parameter)
         line.update(results)
         container[condition] = line
     return container
@@ -35,7 +42,7 @@ def work_with_matrix(name, pwm, pfm, matrix_length, all_ids, deg_table, promoter
 
 def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters, 
              file_format='meme', parameter='enrichment', padj_thr=0.05,
-             log2fc_thr_deg=1, log2fc_thr_background=np.log2(5/4)):    
+             log2fc_thr_deg=1, log2fc_thr_background=np.log2(5/4), gc_threshold=0.1):    
     print('-'*30)
     print('Read DEG table')
     deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
@@ -43,6 +50,8 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     print('-'*30)
     print('Read promoters')
     promoters, all_ids = promoters_parser(path_to_promoters)
+    promoters = sup.seq_to_int(promoters)
+    gc_content = calculate_gc(promoters)
     print('-'*30)
     print('Read matrices')
     matrices = matrices_parser(path_to_db, f=file_format)
@@ -50,12 +59,14 @@ def deg_case(path_to_deg, path_to_db, output_dir, path_to_promoters,
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
     results = []
-    for matrix_data in matrices:
+    for index, matrix_data in enumerate(matrices, start=1):
         name, pwm, pfm, matrix_length = matrix_data
+        print(f'{index}. {name}')
         line = work_with_matrix(name, pwm, pfm, matrix_length, 
                          all_ids, deg_table, 
-                         promoters, parameter, padj_thr, 
-                         log2fc_thr_deg, log2fc_thr_background)
+                         promoters, gc_content, parameter, padj_thr, 
+                         log2fc_thr_deg, log2fc_thr_background,
+                         gc_threshold)
         results.append(line)
     for index, condition in enumerate(['ALL', 'UP', 'DOWN'], 1):
         container = [i[condition] for i in results]

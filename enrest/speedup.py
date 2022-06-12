@@ -1,42 +1,31 @@
-# $ pythran -DUSE_XSIMD -fopenmp -march=native speedup.py
-
+#%%pythran -Ofast -march=native -DUSE_XSIMD
 import numpy as np
+from numpy import random
+
+
 #pythran export sort(float[])
 def sort(scores):
     return np.sort(scores)[::-1]
     
 
-#pythran export complement(str)
-def complement(seq):
-    seq = list(seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper())
-    reversed_seq = ''.join(reversed(seq))
-    return reversed_seq
-
-
-#pythran export seq_to_int(str)
-def seq_to_int(seq):
-    length = len(seq)
-    vec = np.zeros(length, dtype=np.int64)
-    for index in range(length):
-        if seq[index] == 'A':
-            vec[index] = 0
-        elif seq[index] == 'C':
-            vec[index] = 1
-        elif seq[index] == 'G':
-            vec[index] = 2
-        elif seq[index] == 'T':
-            vec[index] = 3
-        else:
-            vec[index] = 4
+#pythran export seq_to_int(str list)
+def seq_to_int(sequences):
+    number_of_promoters = len(sequences)
+    length_of_promoters = len(sequences[0])
+    vec = np.zeros((number_of_promoters, length_of_promoters), dtype=np.int64)
+    for i in range(number_of_promoters):
+        for j in range(length_of_promoters):
+            if sequences[i][j] == 'A':
+                vec[i][j] = 0
+            elif sequences[i][j] == 'C':
+                vec[i][j] = 1
+            elif sequences[i][j] == 'G':
+                vec[i][j] = 2
+            elif sequences[i][j] == 'T':
+                vec[i][j] = 3
+            else:
+                vec[i][j] = 4
     return vec
- 
-    
-#pythran export work_with_seq(str)
-def work_with_seq(seq):
-    seq = seq.strip().upper()
-    seq = complement(seq)
-    seq = seq_to_int(seq)
-    return seq
     
 
 #pythran export get_score_of_site(int[:],float[:,:], int)
@@ -77,7 +66,6 @@ def scaner(promoters, pwm):
     number_of_promoters = promoters.shape[0]
     number_of_scores = (promoters.shape[1] // 2) - length + 1
     scores = np.zeros((number_of_promoters, number_of_scores * 2), dtype=np.float64)
-    # omp parallel for
     for index in range(number_of_promoters):
         seq = promoters[index]
         scores[index] = get_scores_of_seq(seq, pwm, length, number_of_scores)
@@ -95,38 +83,39 @@ def calculate_enrichment(scores, threshold):
     return enrichment
 
 
-#pythran export montecarlo_enrichment(float[:,:], float[:,:], float)
-def montecarlo_enrichment(deg_scores, other_scores, threshold):
-    number_of_deg = len(deg_scores)
-    number_of_other = len(other_scores)
-    #indexes = np.arange(number_of_other)
+#pythran export montecarlo_enrichment(float[:,:], float[:], float[:,:], float[:], float, float)
+def montecarlo_enrichment(deg_scores, deg_gc, other_scores, other_gc, threshold, gc_threshold):
+    number_of_deg, number_of_scores = deg_scores.shape
+    number_of_other = other_scores.shape[0]
+    gc_index = np.abs([other_gc - i for i in deg_gc])
+    gc_index = gc_index < gc_threshold
+    gc_index = [np.where(i)[0] for i in gc_index]
     vec_random_enrichment = np.zeros(1000, dtype=np.float64)
     real_enrichmnet = calculate_enrichment(deg_scores, threshold)
     for i in range(1000):
-        #sample_indexes = np.random.choice(indexes, number_of_deg)
-        sample_indexes = np.random.randint(0, number_of_other, number_of_deg)
-        sample = other_scores[sample_indexes]
+        index = [random.choice(j) for j in gc_index]
+        sample = other_scores[index]
         vec_random_enrichment[i] = calculate_enrichment(sample, threshold)
     random_enrichmnet_mean, random_enrichmnet_std = np.mean(vec_random_enrichment), np.std(vec_random_enrichment)
-    z_score = abs((real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std)
+    z_score = np.abs((real_enrichmnet - random_enrichmnet_mean) / random_enrichmnet_std)
     return z_score, np.log2(real_enrichmnet / random_enrichmnet_mean)
 
 
-#pythran export montecarlo_fraction(float[], float[], float)
-def montecarlo_fraction(deg_scores, other_scores, threshold):
-    number_of_deg = len(deg_scores)
-    number_of_other = len(other_scores)
+#pythran export montecarlo_fraction(float[:], float[:], float[:], float[:], float, float)
+def montecarlo_fraction(deg_scores, deg_gc, other_scores, other_gc, threshold, gc_threshold):
+    number_of_deg = deg_scores.shape[0]
+    number_of_other = other_scores.shape[0]
+    gc_index = np.abs([other_gc - i for i in deg_gc])
+    gc_index = gc_index < gc_threshold
+    gc_index = [np.where(i)[0] for i in gc_index]
     number_of_deg_with_tfbs = np.sum(np.greater_equal(deg_scores, threshold))
     real_fraction = number_of_deg_with_tfbs / number_of_deg
-    #indexes = np.arange(number_of_other)
     vec_random_fraction = np.zeros(1000, dtype=np.float64)
-    # omp parallel for
     for i in range(1000):
-        #sample_indexes = np.random.choice(indexes, number_of_deg)
-        sample_indexes = np.random.randint(0, number_of_other, number_of_deg)
-        sample = other_scores[sample_indexes]
+        index = [random.choice(j) for j in gc_index]
+        sample = other_scores[index]
         number_of_other_with_tfbs = np.sum(np.greater_equal(sample, threshold))
         vec_random_fraction[i] = number_of_other_with_tfbs / number_of_deg
     random_fraction_mean, random_fraction_std = np.mean(vec_random_fraction), np.std(vec_random_fraction)
-    z_score = abs((real_fraction - random_fraction_mean) / random_fraction_std)
+    z_score = np.abs((real_fraction - random_fraction_mean) / random_fraction_std)
     return z_score, np.log2(real_fraction / random_fraction_mean)

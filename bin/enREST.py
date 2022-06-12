@@ -29,7 +29,9 @@ def parse_args():
     deg_parser.add_argument('-l', '--log2fc_deg', action='store', type=float, default=1., 
                         help='The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1')
     deg_parser.add_argument('-L', '--log2fc_back', action='store', type=float, default=0.32192809488736235, 
-                        help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)')    
+                        help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)')
+    deg_parser.add_argument('-c', '--content', action='store', type=float, default=0.1, 
+                        help='The maximal GC content difference between promoters of interest and generated sample in Monte Carlo algorithm. default= 0.1')     
 
     set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
     set_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
@@ -42,6 +44,9 @@ def parse_args():
     set_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
+    set_parser.add_argument('-c', '--content', action='store', type=float, default=0.1, 
+                        help='The maximal GC content difference between promoters of interest and generated sample in Monte Carlo algorithm. default= 0.1')     
+
 
     fasta_parser.add_argument('foreground', action='store', help='Fasta file with sequences are used as foreground')
     fasta_parser.add_argument('background', action='store', help='Fasta file with sequences are used as background')
@@ -55,7 +60,8 @@ def parse_args():
     fasta_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
-    
+    fasta_parser.add_argument('-c', '--content', action='store', type=float, default=0.1, 
+                        help='The maximal GC content difference between foreground and generated sample in Monte Carlo algorithm. default= 0.1')
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -74,6 +80,7 @@ def main():
         padj_thr= args.pvalue
         log2fc_thr_deg = args.log2fc_deg
         log2fc_thr_background = args.log2fc_back
+        gc_threshold = args.content
         
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
@@ -96,7 +103,8 @@ def main():
                  parameter=parameter, 
                  padj_thr=padj_thr,
                  log2fc_thr_deg=log2fc_thr_deg, 
-                 log2fc_thr_background=log2fc_thr_background)
+                 log2fc_thr_background=log2fc_thr_background,
+                 gc_threshold=gc_threshold)
         
     elif args.subparser_name == 'set':
         path_to_set = args.set
@@ -105,6 +113,7 @@ def main():
         promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
+        gc_threshold = args.content
 
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
@@ -123,7 +132,8 @@ def main():
                  output_dir, 
                  path_to_promoters, 
                  file_format=file_format, 
-                 parameter=parameter)
+                 parameter=parameter,
+                 gc_threshold=gc_threshold)
 
     elif args.subparser_name == 'fasta':
         path_to_foreground = args.foreground
@@ -133,6 +143,7 @@ def main():
         promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
+        gc_threshold = args.content
 
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
@@ -152,7 +163,8 @@ def main():
                  output_dir, 
                  path_to_promoters, 
                  file_format=file_format, 
-                 parameter=parameter)      
+                 parameter=parameter,
+                 gc_threshold=gc_threshold)      
     pass
 
     

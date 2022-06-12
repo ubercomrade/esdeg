@@ -2,7 +2,8 @@ import sys
 import lzma
 import numpy as np
 from operator import itemgetter
-from enrest.speedup import work_with_seq
+from collections import Counter
+
 
 def read_list_of_matrix_hocomoco(path):
     container = []
@@ -27,7 +28,7 @@ def read_list_of_matrix_meme(path):
     with open(path) as file:
         for line in file:
             if line.startswith("MOTIF"):
-                matrix_name = line.split()[1]
+                matrix_name = line.split()[-1]
                 for line in file:
                     if line.strip() != "":
                         length, nsites = map(int, itemgetter(*[5,7])(line.strip().split()))
@@ -96,30 +97,44 @@ def matrices_parser(path, f="meme"):
     return container
 
 
+def complement(seq):
+    return seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper()[::-1]
+
+
+def calculate_gc(sequences):
+    length = sequences.shape[1]
+    gc = np.sum(np.logical_or(sequences == 1, sequences == 2), axis=1)
+    gc = gc / length
+    return gc
+
+
 def promoters_parser(path):
-    promoters = []
-    promoters_ids = []
+    container = []
     gname = ''
     with lzma.open(path) as file:
         for line in file:
             line = line.decode()
             if not line.startswith('>'):
-                seq = work_with_seq(line)
-                promoters.append(seq)
-                promoters_ids.append(gname)
+                seq = line.strip().upper()
+                seq += complement(seq)
+                container.append((gname, seq))
             else:
                 gname = line.strip().split(':')[0][1:]
-    return np.array(promoters), promoters_ids
+    container.sort(key=itemgetter(0)) 
+    promoters_ids = [i[0] for i in container]
+    promoters = [i[1] for i in container]
+    return promoters, np.array(promoters_ids)
 
 
 def fasta_parser(path):
-    container = []
+    fasta = []
     with open(path) as file:
         for line in file:
             if not line.startswith('>'):
-                seq = work_with_seq(line)
-                container.append(seq)
-    return np.array(container)
+                seq = line.strip().upper()
+                seq += complement(seq)
+                fasta.append(seq)
+    return fasta
 
     
 def read_set_of_genes(path):
@@ -127,4 +142,4 @@ def read_set_of_genes(path):
     with open(path) as file:
         for line in file:
             container.append(line.strip())
-    return set(container)
+    return np.array(list(set(container)))

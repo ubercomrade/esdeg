@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
-from enrest.functions import run_test, get_threshold, get_other_gene_ids_for_set_case, split_scores_by_gene_ids
+from enrest.functions import run_test, get_threshold, get_other_gene_ids_for_set_case, split_scores_by_gene_ids, calculate_gc
 from enrest.parsers import matrices_parser, promoters_parser, read_set_of_genes
 import enrest.speedup as sup
 
 
 
-def work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter):
+def work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, gc_content, parameter, gc_threshold):
     line = {('', 'ID'): name}
     print(f'{name}')
     all_scores = sup.scaner(promoters, pwm)
@@ -21,22 +21,32 @@ def work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters,
     threshold_table = threshold_table[indexes]
     other_ids = get_other_gene_ids_for_set_case(set_ids, all_ids)
     if parameter == "enrichment":
-        set_scores, other_scores, genes = split_scores_by_gene_ids(all_scores, all_ids, set_ids, other_ids)
+        set_scores, set_gc, other_scores, other_gc, genes = split_scores_by_gene_ids(all_scores,
+                                                                                         gc_content,
+                                                                                         all_ids,
+                                                                                         set_ids,
+                                                                                         other_ids)
     elif parameter == "fraction":
-        set_scores, other_scores, genes = split_scores_by_gene_ids(best_scores, all_ids, set_ids, other_ids)
-    results = run_test(genes, set_scores, other_scores, threshold_table, parameter)
+        set_scores, set_gc, other_scores, other_gc, genes = split_scores_by_gene_ids(best_scores,
+                                                                                         gc_content,
+                                                                                         all_ids,
+                                                                                         set_ids, 
+                                                                                         other_ids)
+    results = run_test(genes, set_scores, set_gc, other_scores, other_gc, threshold_table, gc_threshold, parameter)
     line.update(results)
     return line
 
 
 def set_case(path_to_set, path_to_db, output_dir, path_to_promoters, 
-             file_format="meme", parameter="enrichment"):    
+             file_format="meme", parameter="enrichment", gc_threshold=0.1):    
     print('-'*30)
     print('Read SET of genes')
     set_ids = read_set_of_genes(path_to_set)
     print('-'*30)
     print('Read promoters')
     promoters, all_ids = promoters_parser(path_to_promoters)
+    promoters = sup.seq_to_int(promoters)
+    gc_content = calculate_gc(promoters)
     print('-'*30)
     print('Read matrices')
     matrices = matrices_parser(path_to_db, f=file_format)
@@ -46,7 +56,9 @@ def set_case(path_to_set, path_to_db, output_dir, path_to_promoters,
     results = []
     for matrix_data in matrices:
         name, pwm, pfm, matrix_length = matrix_data
-        line = work_with_matrix(name, pwm, pfm, matrix_length, set_ids, all_ids, promoters, parameter)
+        line = work_with_matrix(name, pwm, pfm, matrix_length, 
+                                set_ids, all_ids, promoters, 
+                                gc_content, parameter, gc_threshold)
         results.append(line)
     df = pd.DataFrame(results, columns=results[0].keys())
     output_path = f"{output_dir}/all.tsv"

@@ -31,21 +31,16 @@ def calculate_fprs(min_fpr, n=3):
     return container
 
 
-def split_scores_by_gene_ids(scores, all_ids, deg_ids, other_ids):
-    deg_scores = []
-    other_scores = []
-    exist = []
-    set_deg_ids = set(deg_ids)
-    set_other_ids = set(other_ids)
-    for index, i in enumerate(all_ids):
-        if i in set_deg_ids:
-            exist.append(i)
-            deg_scores.append(scores[index])
-        elif i in set_other_ids:
-            other_scores.append(scores[index])
-        else:
-            continue
-    return np.array(deg_scores), np.array(other_scores), exist
+def split_scores_by_gene_ids(scores, gc, all_ids, deg_ids, other_ids):
+    ids, index_all, index_deg = np.intersect1d(all_ids, deg_ids, assume_unique=True, return_indices=True) 
+    deg_scores = scores[index_all]
+    deg_gc = gc[index_all]
+    genes = all_ids[index_all]
+    
+    ids, index_all, index_other = np.intersect1d(all_ids, other_ids, assume_unique=True, return_indices=True) 
+    other_scores = scores[index_all]
+    other_gc = gc[index_all]
+    return deg_scores, deg_gc, other_scores, other_gc, genes
 
 
 def hartung(p):
@@ -75,24 +70,24 @@ def get_deg_gene_ids(df, cond, padj_thr=0.05, log2fc_thr=1):
     elif cond == 'UP':
         df = df[df['log2FoldChange'] >= log2fc_thr]
     df = df[df['padj'] <= padj_thr]
-    gene_ids = [i for i in df['id'] if isinstance(i, str)]
+    gene_ids = np.array([i for i in df['id'] if isinstance(i, str)])
     return gene_ids
 
 
 def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
     log2fc_thr = abs(log2fc_thr)
-    #df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
+    df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
     df = df[df['padj'] > padj_thr]
-    gene_ids = [i for i in df['id'] if isinstance(i, str)]
+    gene_ids = np.array([i for i in df['id'] if isinstance(i, str)])
     return gene_ids
 
 
 def get_other_gene_ids_for_set_case(set_ids, all_ids):
-    gene_ids = set(all_ids) - set(set_ids)
-    return gene_ids
+    gene_ids = set(list(all_ids)) - set(list(set_ids))
+    return np.array(list(gene_ids))
 
 
-def run_test(genes, set_scores, other_scores, threshold_table, parameter):
+def run_test(genes, set_scores, set_gc, other_scores, other_gc, threshold_table, gc_threshold, parameter):
     results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0, ('LOW', 'genes'): [],
                ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0, ('MIDDLE', 'genes'): [],
                ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0, ('HIGH', 'genes'): [],
@@ -102,10 +97,14 @@ def run_test(genes, set_scores, other_scores, threshold_table, parameter):
     for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
         threshold, fpr = threshold_table[index]
         if parameter == "enrichment":
-            z_score, fold = montecarlo_enrichment(set_scores, other_scores, threshold)
+            z_score, fold = montecarlo_enrichment(set_scores, set_gc,
+                                                  other_scores, other_gc,
+                                                  threshold, gc_threshold)
             genes_with_bs = genes[np.sum(np.greater_equal(set_scores, threshold), axis=1) > 0]
         elif parameter == "fraction":
-            z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
+            z_score, fold = montecarlo_fraction(set_scores, set_gc,
+                                                other_scores, other_gc,
+                                                threshold, gc_threshold)
             genes_with_bs = genes[np.greater_equal(set_scores, threshold)]
         pval = stats.norm.sf(z_score)          
         pvals.append(pval)
@@ -117,7 +116,7 @@ def run_test(genes, set_scores, other_scores, threshold_table, parameter):
     return results
 
 
-def run_test_fasta(set_scores, other_scores, threshold_table, parameter):
+def run_test_fasta(set_scores, set_gc, other_scores, other_gc, threshold_table, gc_threshold, parameter):
     results = {('LOW', 'log2Fold'): 0, ('LOW', 'pval'): 0,
                ('MIDDLE', 'log2Fold'): 0, ('MIDDLE', 'pval'): 0,
                ('HIGH', 'log2Fold'): 0, ('HIGH', 'pval'): 0,
@@ -126,9 +125,13 @@ def run_test_fasta(set_scores, other_scores, threshold_table, parameter):
     for index, level in zip(range(0, len(threshold_table)), ['LOW', 'MIDDLE', 'HIGH']):
         threshold, fpr = threshold_table[index]
         if parameter == "enrichment":
-            z_score, fold = montecarlo_enrichment(set_scores, other_scores, threshold)
+            z_score, fold = montecarlo_enrichment(set_scores, set_gc,
+                                                  other_scores, other_gc,
+                                                  threshold, gc_threshold)
         elif parameter == "fraction":
-            z_score, fold = montecarlo_fraction(set_scores, other_scores, threshold)
+            z_score, fold = montecarlo_fraction(set_scores, set_gc,
+                                                other_scores, other_gc,
+                                                threshold, gc_threshold)
         pval = stats.norm.sf(z_score)          
         pvals.append(pval)
         results[(level, 'pval')] = pval
