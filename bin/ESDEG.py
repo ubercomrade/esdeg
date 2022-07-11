@@ -24,7 +24,7 @@ def parse_args():
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     deg_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='Organism (hg38, mm10, tair10)')
-    deg_parser.add_argument('output', action='store', help='Name of directory for output files')
+    deg_parser.add_argument('output', action='store', help='Path to write table with results')
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
@@ -45,7 +45,7 @@ def parse_args():
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     set_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='Organism (hg38, mm10, tair10)')
-    set_parser.add_argument('output', action='store', help='Name of directory for output files')
+    set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
