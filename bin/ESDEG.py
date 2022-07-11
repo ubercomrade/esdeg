@@ -75,9 +75,6 @@ def main():
         log2fc_thr_deg = args.log2fc_deg
         log2fc_thr_background = args.log2fc_back
         gc_threshold = args.content
-        
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
 
         deg_case(path_to_deg, 
                  path_to_db,
@@ -98,9 +95,6 @@ def main():
         parameter = args.parameter
         file_format = args.format
         gc_threshold = args.content
-
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
     
         set_case(path_to_set, 
                  path_to_db,
@@ -113,7 +107,6 @@ def main():
         path_to_db = args.matrices
         output_dir = args.output
         promoters = args.promoters
-        parameter = args.parameter
         file_format = args.format
 
         if not os.path.isdir(output_dir):
