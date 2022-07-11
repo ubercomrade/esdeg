@@ -69,7 +69,6 @@ def main():
         path_to_deg = args.deg
         path_to_db = args.matrices
         path_to_output = args.output
-        promoters = args.promoters
         organism = args.organism
         condition = args.regulated
         padj_thr= args.pvalue
@@ -113,7 +112,7 @@ def main():
     elif args.subparser_name == 'preparation':
         path_to_db = args.matrices
         output_dir = args.output
-        organism = args.organism
+        promoters = args.promoters
         parameter = args.parameter
         file_format = args.format
 
