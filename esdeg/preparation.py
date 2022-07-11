@@ -1,4 +1,5 @@
-import pandas as pd
+import os
+import json
 import numpy as np
 from esdeg.functions import get_threshold, calculate_gc
 from esdeg.parsers import matrices_parser, promoters_parser

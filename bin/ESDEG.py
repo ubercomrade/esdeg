@@ -70,6 +70,7 @@ def main():
         path_to_db = args.matrices
         path_to_output = args.output
         organism = args.organism
+        parameter = args.parameter
         condition = args.regulated
         padj_thr= args.pvalue
         log2fc_thr_deg = args.log2fc_deg
