@@ -13,8 +13,8 @@ def parse_args():
     set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
 
     preparation_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
-    preparation_parser.add_argument('promoters', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
-         help='promoters of organism (hg38, mm10, tair10)')
+    preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+         help='organism (hg38, mm10, tair10)')
     preparation_parser.add_argument('output', action='store', help='Name of directory for output files')
     preparation_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
