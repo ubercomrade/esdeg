@@ -28,9 +28,9 @@ usage: enREST.py [-h] {deg,set,fasta} ...
 
 positional arguments:
   {deg,set,fasta}  Available commands:
+    preparation    Run data base preparation
     deg            Run test on DEGs
     set            Run test on SET of genes
-    fasta          Run test on user FASTA files
 
 optional arguments:
   -h, --help       show this help message and exit
@@ -40,7 +40,7 @@ Command `enREST.py deg` is used for analisys DEGs (input of DEseq2 is used).
 
 Command `enREST.py set` is used for analisys SET of genes (input of gene list is used).
 
-Command `enREST.py fasta` is used for analisys user FASTA files (input of sequences in FATSA format is used).
+Command `enREST.py Rpreparation` is used for preparing motif data base for next analisys (input of motifs in HOCOMOCO/MEME format is used).
 
 ## DEG case
 

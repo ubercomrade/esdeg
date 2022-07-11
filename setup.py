@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""kek"""
 from setuptools import setup
 
 try:
     from pythran.dist import PythranExtension, PythranBuildExt
     setup_args = {
         'cmdclass': {"build_ext": PythranBuildExt},
-        'ext_modules': [PythranExtension('enrest.speedup', sources = ['enrest/speedup.py'], extra_compile_args=["-Ofast", "-march=native", "-DUSE_XSIMD"])],
+        'ext_modules': [PythranExtension('esdeg.speedup', sources = ['esdeg/speedup.py'], extra_compile_args=["-Ofast", "-march=native", "-DUSE_XSIMD"])],
     }
 except ImportError:
     print("Not building Pythran extension")
@@ -17,18 +16,18 @@ with open("README.md", "r") as fh:
 
 install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy', 'pythran']
 setup(
-    name='enREST',
+    name='ESDEG',
     version='0.0.1',
     description='DEG analisys',
     author='Anton Tsukanov',
     author_email='tsukanov@bionet.nsc.ru',
     url='http://github.com/ubercomrade/enrest',
-    package_dir={'enrest' : 'enrest'},
-    packages=['enrest'],
+    package_dir={'esdeg' : 'esdeg'},
+    packages=['esdeg'],
     package_data={
         'data': ['*.fa'],
     },
-    scripts=['bin/enREST.py',],
+    scripts=['bin/ESDEG.py',],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

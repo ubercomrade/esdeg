@@ -28,7 +28,7 @@ def read_list_of_matrix_meme(path):
     with open(path) as file:
         for line in file:
             if line.startswith("MOTIF"):
-                matrix_name = line.split()[-1]
+                matrix_name = '_'.join(line.split()[-1:])
                 for line in file:
                     if line.strip() != "":
                         length, nsites = map(int, itemgetter(*[5,7])(line.strip().split()))
