@@ -78,7 +78,7 @@ def main():
 
         deg_case(path_to_deg, 
                  path_to_db,
-                 output, 
+                 path_to_output, 
                  organism, 
                  parameter=parameter, 
                  padj_thr=padj_thr,
@@ -106,20 +106,20 @@ def main():
     elif args.subparser_name == 'preparation':
         path_to_db = args.matrices
         output_dir = args.output
-        promoters = args.promoters
+        organism = args.organism
         file_format = args.format
 
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
     
         this_dir, this_filename = os.path.split(__file__)
-        if promoters == 'mm10':
+        if organism == 'mm10':
             path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa.xz")
-        elif promoters == 'hg38':
+        elif organism == 'hg38':
             path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa.xz")
-        elif promoters == 'tair10':
+        elif organism == 'tair10':
             path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
-        elif promoters == 'rnor6':
+        elif organism == 'rnor6':
             path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
 
         prepare_motif_db(path_to_db, 

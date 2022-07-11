@@ -38,7 +38,7 @@ hg38 \
 
 time ESDEG.py set \
 ./HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt \
-./matrices_for_set_testing 
+./matrices_for_set_testing \
 hg38 \
 ./nfkb1.montecarlo.fraction.tsv \
 --parameter fraction
