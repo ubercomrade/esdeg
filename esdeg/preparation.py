@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from esdeg.functions import run_test_fasta, get_threshold, calculate_gc
+from esdeg.functions import get_threshold, calculate_gc
 from esdeg.parsers import matrices_parser, promoters_parser
 import esdeg.speedup as sup
 
