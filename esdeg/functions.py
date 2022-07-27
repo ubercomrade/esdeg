@@ -47,11 +47,9 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
         other = np.array(other >= 1, dtype=int)
         
     #run montecarlo
-    if gc_threshold < 1.0:
-        z_scores, odds_ratio = montecarlo_gc(foreground, foreground_gc, 
+    z_scores, odds_ratio = montecarlo(foreground, foreground_gc, 
                                           other, other_gc, gc_threshold)
-    else:
-        z_scores, odds_ratio = montecarlo(foreground, other)
+    #z_scores, odds_ratio = montecarlo(foreground, other)
     
     #list of genes with site (thr 0.0005)
     genes_with_bs = genes[np.greater_equal(foreground[:,1], 1)]
@@ -74,16 +72,18 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
     return results
 
 
-def montecarlo_gc(foreground, foreground_gc, other, other_gc, gc_threshold):
+def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
     number_of_foreground, number_of_thresholds = foreground.shape
     number_of_other = other.shape[0]
     gc_index = np.abs([other_gc - i for i in foreground_gc])
     gc_index = gc_index < gc_threshold
-    gc_index = [np.where(i)[0] for i in gc_index]
+    indexes = np.zeros((number_of_foreground, 1000), dtype=np.int64)
+    for i in range(number_of_foreground):
+        indexes[i] = np.random.choice(gc_index[i].nonzero()[0], 1000)
     random = np.zeros((1000, number_of_thresholds), dtype=np.int64)
     real = np.sum(foreground, axis=0)
     for i in range(1000):
-        index = [np.random.choice(j) for j in gc_index]
+        index = indexes[:,i]
         sample = other[index]
         random[i] = np.sum(sample, axis=0)
     random_mean, random_std = np.mean(random, axis=0), np.std(random, axis=0)
@@ -91,18 +91,18 @@ def montecarlo_gc(foreground, foreground_gc, other, other_gc, gc_threshold):
     return z_score, np.mean(real / np.mean(random, axis=0))
 
 
-def montecarlo(foreground, other):
-    number_of_foreground, number_of_thresholds = foreground.shape
-    number_of_other = other.shape[0]
-    random = np.zeros((1000, number_of_thresholds), dtype=np.int64)
-    real = np.sum(foreground, axis=0)
-    for i in range(1000):
-        index = np.random.choice(number_of_other, number_of_foreground)
-        sample = other[index]
-        random[i] = np.sum(sample, axis=0)
-    random_mean, random_std = np.mean(random, axis=0), np.std(random, axis=0)
-    z_score = np.abs((real - random_mean) / random_std)
-    return z_score, np.mean(real / np.mean(random, axis=0))
+# def montecarlo(foreground, other):
+#     number_of_foreground, number_of_thresholds = foreground.shape
+#     number_of_other = other.shape[0]
+#     random = np.zeros((1000, number_of_thresholds), dtype=np.int64)
+#     real = np.sum(foreground, axis=0)
+#     for i in range(1000):
+#         index = np.random.choice(number_of_other, number_of_foreground)
+#         sample = other[index]
+#         random[i] = np.sum(sample, axis=0)
+#     random_mean, random_std = np.mean(random, axis=0), np.std(random, axis=0)
+#     z_score = np.abs((real - random_mean) / random_std)
+#     return z_score, np.mean(real / np.mean(random, axis=0))
 
 
 def hartung(p):
