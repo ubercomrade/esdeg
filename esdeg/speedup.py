@@ -2,7 +2,7 @@ import numpy as np
 from numpy import random
 
 
-#pythran export sort(float[])
+#pythran export sort(float[:])
 def sort(scores):
     return np.sort(scores)[::-1]
     
@@ -39,7 +39,7 @@ def get_score_of_site(site, pwm, length):
     return score
 
 
-#pythran export get_scores_of_seq(int[],float[:,:], int, int)
+#pythran export get_scores_of_seq(int[:],float[:,:], int, int)
 def get_scores_of_seq(seq, pwm, length, number_of_scores):
     scores = np.zeros(number_of_scores * 2, dtype=np.float64)
     for i in range(number_of_scores):
