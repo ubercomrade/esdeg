@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 import numpy as np
+from statsmodels.stats.multitest import multipletests
 from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids
 from esdeg.parsers import matrices_parser, promoters_parser, read_set_of_genes
 
@@ -51,6 +52,9 @@ def deg_case(path_to_deg, path_to_db, path_to_output, organism,
         line.update(out)
         results.append(line)
     df = pd.DataFrame(results)
+    _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
+    df['adj.pval'] = adj_pval
+    df = df[['matrix', 'log(or)', 'distance', 'pval', 'adj.pval', 'genes']]
     df.to_csv(path_to_output, sep='\t', index=False)
     print('-'*30)
     pass

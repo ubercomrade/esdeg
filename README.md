@@ -10,8 +10,8 @@ We developed approach that help to find TF plaing role in DEG.
   * pythran
   * pandas
 
-  You can use pip to install dependences `pip install numpy, scipy, pythran, pandas`,
-  Or you can use conda `conda install numpy, scipy, pythran, pandas`
+  You can use pip to install dependences `pip install numpy, scipy, statsmodels, pythran, pandas`,
+  Or you can use conda `conda install numpy, scipy, statsmodels, pythran, pandas`
 
 ## Installation
 
@@ -316,15 +316,38 @@ hg38 \
 ```
 
 ## Output file format
+ESDEG generates output file in tsv format.
+Here is example of file:
+```
+matrix  log(or) distance  pval  adj.pval genes
+OVOL1_HUMAN.H11MO.0.C 0.366649526240003 3.78217128582708  0.000278219178978296  0.000834657536934888  ENSG00000000971;ENSG00000008311;ENSG00000009694...
+AHR_HUMAN.H11MO.0.B -0.468957662848219  -2.86315741842022 0.00311620230691013 0.00623240461382027 ENSG00000009694;ENSG00000019549;ENSG00000021300...
+AIRE_HUMAN.H11MO.0.C  0.166577225854898 1.42032679890637  0.134777945940099 0.161733535128118 ENSG00000008311;ENSG00000009694;ENSG00000019549...
+ALX1_HUMAN.H11MO.0.B  0.533935023187338 98.3543133675692  4.53256741484101E-99  2.71954044890461E-98  ENSG00000000971;ENSG00000008311;ENSG00000009694...
+PBX1_HUMAN.H11MO.0.A  -0.0796380533521957 -1.1967039140339  0.274421836462296 0.274421836462296 ENSG00000000971;ENSG00000008311;ENSG00000009694...
+PBX2_HUMAN.H11MO.0.C  0.243876166666887 1.77057549835486  0.0482711130305087  0.0724066695457631  ENSG00000000971;ENSG00000008311;ENSG00000009694...
+```
+Where:
+**matrix** - name of motif from data base. Names depends on preparation step.
 
-Work in progress...
+**log(or)** - it's -log2 transforamation of  odds ratio (OR). It could be defined as $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach (fraction approach). Also It could be defined as $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach (enrichment approach)
+
+**distance** - it's the euclidean distance of each factor calculated by using p-value and OR [5]. 
+
+**pval** - it's combined p-value culculated by Hartung method [6]. 
+
+**adj.pval** - adjasted p-value by Benjamini-Hochberg FDR correction. `statsmodels` is used to apply this correction. 
+
+**genes** - list of genes with predicted sites (threshold(ERR) = 0.0005). 
 
 ## Reference
 
 1. Love, M. I., Huber, W., & Anders, S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, *15*(12), 550. https://doi.org/10.1186/s13059-014-0550-8
 2. Monier, B., McDermaid, A., Wang, C., Zhao, J., Miller, A., Fennell, A., & Ma, Q. (2019). IRIS-EDA: An integrated RNA-Seq interpretation system for gene expression data analysis. *PLOS Computational Biology*, *15*(2), e1006792. https://doi.org/10.1371/journal.pcbi.1006792
 3. Kulakovskiy, I. v., Vorontsov, I. E., Yevshin, I. S., Sharipov, R. N., Fedorova, A. D., Rumynskiy, E. I., Medvedeva, Y. A., Magana-Mora, A., Bajic, V. B., Papatsenko, D. A., Kolpakov, F. A., & Makeev, V. J. (2018). HOCOMOCO: Towards a complete collection of transcription factor binding models for human and mouse via large-scale ChIP-Seq analysis. *Nucleic Acids Research*, *46*(D1), D252–D259. https://doi.org/10.1093/nar/gkx1106
-3. Machanick, P., & Bailey, T. L. (2011). MEME-ChIP: motif analysis of large DNA datasets. *Bioinformatics*, *27*(12), 1696–1697. https://doi.org/10.1093/bioinformatics/btr189
+4. Machanick, P., & Bailey, T. L. (2011). MEME-ChIP: motif analysis of large DNA datasets. *Bioinformatics*, *27*(12), 1696–1697. https://doi.org/10.1093/bioinformatics/btr189
+5. Puente-Santamaria, L., Wasserman, W. W., & Del Peso, L. (2019). TFEA.ChIP: a tool kit for transcription factor binding site enrichment analysis capitalizing on ChIP-seq datasets. Bioinformatics (Oxford, England), 35(24), 5339–5340. https://doi.org/10.1093/bioinformatics/btz573
+6. Hartung, J. (1999). A note on combining dependent tests of significance. Biometrical Journal, 41(7), 849-855.
 
 ## License
 

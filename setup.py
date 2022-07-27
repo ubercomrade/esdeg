@@ -14,7 +14,7 @@ except ImportError:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy', 'pythran']
+install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy', 'statsmodels', 'pythran']
 setup(
     name='ESDEG',
     version='0.0.1',
