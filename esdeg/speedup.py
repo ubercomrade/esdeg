@@ -11,7 +11,7 @@ def sort(scores):
 def seq_to_int(sequences):
     number_of_promoters = len(sequences)
     length_of_promoters = len(sequences[0])
-    vec = np.zeros((number_of_promoters, length_of_promoters), dtype=np.int64)
+    vec = np.zeros((number_of_promoters, length_of_promoters), dtype=int)
     for i in range(number_of_promoters):
         for j in range(length_of_promoters):
             if sequences[i][j] == 'A':
@@ -41,7 +41,7 @@ def get_score_of_site(site, pwm, length):
 
 #pythran export get_scores_of_seq(int[:],float[:,:], int, int)
 def get_scores_of_seq(seq, pwm, length, number_of_scores):
-    scores = np.zeros(number_of_scores * 2, dtype=np.float64)
+    scores = np.zeros(number_of_scores * 2, dtype=float)
     for i in range(number_of_scores):
         #forward
         site = seq[i:length + i]
@@ -64,7 +64,7 @@ def scaner(promoters, pwm):
     length = pwm.shape[1]
     number_of_promoters = promoters.shape[0]
     number_of_scores = (promoters.shape[1] // 2) - length + 1
-    scores = np.zeros((number_of_promoters, number_of_scores * 2), dtype=np.float64)
+    scores = np.zeros((number_of_promoters, number_of_scores * 2), dtype=float)
     for index in range(number_of_promoters):
         seq = promoters[index]
         scores[index] = get_scores_of_seq(seq, pwm, length, number_of_scores)
@@ -73,7 +73,7 @@ def scaner(promoters, pwm):
 
 #pythran export count_sites(float[:,:], float[:,:])
 def count_sites(scores, threshold_table):
-    counts = np.zeros((scores.shape[0], threshold_table.shape[0]), dtype=np.int64)
+    counts = np.zeros((scores.shape[0], threshold_table.shape[0]), dtype=int)
     for i in range(threshold_table.shape[0]):
         counts[:,i] = np.sum(np.greater_equal(scores, threshold_table[i][0]), axis=1)
     return counts

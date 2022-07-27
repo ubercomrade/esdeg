@@ -5,7 +5,7 @@ try:
     from pythran.dist import PythranExtension, PythranBuildExt
     setup_args = {
         'cmdclass': {"build_ext": PythranBuildExt},
-        'ext_modules': [PythranExtension('esdeg.speedup', sources = ['esdeg/speedup.py'])],
+        'ext_modules': [PythranExtension('esdeg.speedup', sources = ['esdeg/speedup.py'],  extra_compile_args=["-Ofast", "-DUSE_XSIMD"])],
     }
 except ImportError:
     print("Not building Pythran extension")
