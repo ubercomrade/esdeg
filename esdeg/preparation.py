@@ -1,7 +1,7 @@
 import os
 import json
 import numpy as np
-from esdeg.functions import get_threshold, calculate_gc
+from esdeg.functions import get_threshold, calculate_gc, make_k_mers
 from esdeg.parsers import matrix_parser, bamm_parser, promoters_parser
 import esdeg.speedup as sup
 
