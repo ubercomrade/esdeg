@@ -30,8 +30,8 @@ def prepare_motif_db_pwm(path_to_db, output_dir, path_to_promoters, organism, fi
     
     print('Read matrices')
     motifs = matrix_parser(path_to_db, f=file_format)
-    number_of_matrices = len(matrices)
-    print(f'Number of matrices = {number_of_matrices}')
+    number_of_motifs = len(motifs)
+    print(f'Number of matrices = {number_of_motifs}')
     print('-'*30)
     
     for index, motif_data in enumerate(motifs, start=1):
