@@ -159,16 +159,17 @@ Options for `-f/--format ` are  _meme_ and _hocomoco_. You should choose value o
 ## Preparation (BaMM, experimental!)
 
 ```
-usage: ESDEG.py bamm_preparation [-h] bamms N output order
+usage: ESDEG.py bamm_preparation [-h] [-o ORDER] bamms N output
 
 positional arguments:
-  bamms       Path to directory with list of subdirectories contained BaMM models. BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed
-  N           organism (hg38, mm10, tair10)
-  output      Name of directory to write output files
-  order       Order of BaMMs. Order have to be common for all models. Default is 2.
+  bamms                 Path to directory with list of subdirectories contained BaMM models. BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed
+  N                     organism (hg38, mm10, tair10)
+  output                Name of directory to write output files
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  -o ORDER, --order ORDER
+                        Order of BaMMs. Order have to be common for all models. Default is 2.
 ```
 #### Required arguments description
 
@@ -205,15 +206,15 @@ Options for `N` are _hg38_ or _mm10_. Depend on organism usage in research
 
 Directory to write prepared database of motifs.
 
-**Fourth positional argument** `order`:
-
-Order of BaMMs. Order have to be common for all models.
-
 #### Optional arguments description
 
 **First optional argument** `-h; --help` :
 
 Print help to STDOUT
+
+**Second optional argument** `-o; --order`:
+
+Order of BaMMs. Order have to be common for all models.
 
 
 ## DEG case
