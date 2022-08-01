@@ -298,7 +298,7 @@ The argument `-c; --content` is used to set threshold of GC content for generati
 Bash script with examples and data are located in `./example/example_run.sh` . You should run this script in `./example` directory.
 
 ```
-ESDEG.py preparation \
+ESDEG.py pwm_preparation \
 ./several_matrices_for_deg_testing.txt \
 hg38 \
 ./matrices_for_deg_testing \

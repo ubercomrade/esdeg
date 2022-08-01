@@ -3,22 +3,30 @@ import sys
 import argparse
 from esdeg.set import set_case
 from esdeg.deg import deg_case
-from esdeg.preparation import prepare_motif_db
+from esdeg.preparation import prepare_motif_db_pwm, prepare_motif_db_bamm
 
 def parse_args():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser_name', help='Available commands:')
-    preparation_parser = subparsers.add_parser('preparation', help='Run data base preparation')
+    pwm_preparation_parser = subparsers.add_parser('pwm_preparation', help='Run data base preparation (PWM models)')
+    bamm_preparation_parser = subparsers.add_parser('bamm_preparation', help='Run data base preparation (BaMM models, experimental!)')
     deg_parser = subparsers.add_parser('deg', help='Run test on DEGs')
     set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
 
-    preparation_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
-    preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    pwm_preparation_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
+    pwm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='organism (hg38, mm10, tair10)')
-    preparation_parser.add_argument('output', action='store', help='Name of directory for output files')
-    preparation_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
+    pwm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
+    pwm_preparation_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
                         help='Format of file with matrices (meme or hocomoco), default= meme')
+
+    bamm_preparation_parser.add_argument('bamms', action='store', help='Path to directory with list of subdirectories contained BaMM models. \
+                                         BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed')
+    bamm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+         help='organism (hg38, mm10, tair10)')
+    bamm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
+    bamm_preparation_parser.add_argument('order', action='store',  help='Order of BaMMs. Order have to be common for all models. Default is 2.', type=int, default=2)
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
@@ -104,7 +112,7 @@ def main():
                  parameter=parameter,
                  gc_threshold=gc_threshold)
 
-    elif args.subparser_name == 'preparation':
+    elif args.subparser_name == 'pwm_preparation':
         path_to_db = args.matrices
         output_dir = args.output
         organism = args.organism
@@ -123,11 +131,36 @@ def main():
         elif organism == 'rnor6':
             path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
 
-        prepare_motif_db(path_to_db, 
+        prepare_motif_db_pwm(path_to_db, 
                          output_dir, 
                          path_to_promoters, 
                          organism, 
                          file_format=file_format)
+
+    elif args.subparser_name == 'bamm_preparation':
+        path_to_db = args.bamms
+        order = args.order
+        output_dir = args.output
+        organism = args.organism
+
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+    
+        this_dir, this_filename = os.path.split(__file__)
+        if organism == 'mm10':
+            path_to_promoters = os.path.join(this_dir, "../data", "mm10.ensembl.promoters.fa.xz")
+        elif organism == 'hg38':
+            path_to_promoters = os.path.join(this_dir, "../data", "hg38.ensembl.promoters.fa.xz")
+        elif organism == 'tair10':
+            path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
+        elif organism == 'rnor6':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
+
+        prepare_motif_db_bamm(path_to_db, 
+                              order, 
+                              output_dir, 
+                              path_to_promoters, 
+                              organism)
     pass
 
     

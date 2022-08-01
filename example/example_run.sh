@@ -1,11 +1,11 @@
 #!/bin/bash
-time ESDEG.py preparation \
+time ESDEG.py pwm_preparation \
 ./several_matrices_for_deg_testing.txt \
 hg38 \
 ./matrices_for_deg_testing \
 --format hocomoco
  
-time ESDEG.py preparation \
+time ESDEG.py pwm_preparation \
 ./several_matrices_for_set_testing.txt \
 hg38 \
 ./matrices_for_set_testing \

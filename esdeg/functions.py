@@ -2,16 +2,40 @@ import os
 import json
 import numpy as np
 import pandas as pd
+import collections
+from itertools import product
 from scipy import stats
 from scipy.stats import norm, chi2
 from itertools import tee
 
 
+# def calculate_gc(sequences):
+#     length = sequences.shape[1]
+#     gc = np.sum(np.logical_or(sequences == 1, sequences == 2), axis=1)
+#     gc = gc / length
+#     return gc
+
+
 def calculate_gc(sequences):
-    length = sequences.shape[1]
-    gc = np.sum(np.logical_or(sequences == 1, sequences == 2), axis=1)
-    gc = gc / length
-    return gc
+    gc = []
+    length = len(sequences[0])
+    for seq in sequences:
+        counter = collections.Counter(seq)
+        gc.append((counter['C'] + counter['G']) / length)
+    return np.array(gc)
+
+
+def make_k_mers(order):
+    tmp = product('ACGT', repeat=order + 1)
+    k_mer = []
+    for i in tmp:
+        k_mer.append(''.join(i))
+    k_mer_dict = dict()
+    index = 0
+    for i in k_mer:
+        k_mer_dict[i] = index
+        index += 1
+    return(k_mer_dict)
 
 
 def get_threshold(scores):

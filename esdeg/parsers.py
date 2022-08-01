@@ -1,10 +1,11 @@
+import os
 import sys
 import lzma
 import numpy as np
 from operator import itemgetter
-from collections import Counter
 
 
+## PWM parser
 def read_list_of_matrix_hocomoco(path):
     container = []
     matrix = []
@@ -77,7 +78,7 @@ def to_score(matrix, norm_value):
         return score
 
 
-def matrices_parser(path, f="meme"):
+def matrix_parser(path, f="meme"):
     container = []
     try:
         if f == "meme":
@@ -97,6 +98,80 @@ def matrices_parser(path, f="meme"):
     return container
 
 
+## BaMM parser
+def read_bamm_and_bg_from_file(bamm_file, bg_file):
+
+    # Read BG file
+    bg = {}
+    order = 0
+    if os.path.isfile(bg_file):
+        with open(bg_file) as bgmodel_file:
+            line = bgmodel_file.readline()  # skip the first line for K
+            line = bgmodel_file.readline()  # skip the second line for Alpha
+            for line in bgmodel_file:
+                bg_freq = [float(p) for p in line.split()]
+                if bg_freq == []: break
+                bg[order] = bg_freq
+                order += 1
+    else:
+        print(f'There is not {bg_file}')
+
+    # Read BaMM file
+    if os.path.isfile(bamm_file):
+        motif_order = 0
+        with open(bamm_file) as file:
+            for line in file:
+                if line[0] != '\n':
+                    motif_order = motif_order + 1
+                else:
+                    break
+
+        # count the motif length
+        motif_length = int(sum(1 for line in open(bamm_file)) / (motif_order + 1))
+
+        # read in bamm model
+        model = {}
+        for k in range(motif_order):
+            model[k] = []
+
+        with open(bamm_file) as file:
+            for j in range(motif_length):
+                for k in range(motif_order):
+                    model[k].append([float(p) for p in file.readline().split()])
+                file.readline()
+    else:
+        print(f'There is not {bamm_file}')
+
+
+                
+    # delete overhigh order
+    for mo in range(motif_order):
+        if mo > order - 1:
+            model.pop(mo)
+    return(model, bg, order-1)
+
+
+def read_bamm(bamm_path, bg_path):
+    bamm, bg, order = read_bamm_and_bg_from_file(bamm_path, bg_path)
+    container = dict()
+    log_odds_bamm = np.log2(np.array(bamm[order]) / np.array(bg[order]))
+    log_odds_bamm = np.array(log_odds_bamm, dtype=float)
+    return log_odds_bamm, order
+
+
+def bamm_parser(directory):
+    container = []
+    names = [i for i in os.listdir(directory) if not i.startswith('.')]
+    for name in names:
+        bamm_path = f'{directory}/{name}/{name}_motif_1.ihbcp'
+        bg_path = f'{directory}/{name}/{name}.hbcp'
+        bamm, order = read_bamm(bamm_path, bg_path)
+        model_length = bamm.shape[0]
+        container.append([name, bamm, order, model_length])
+    return container
+
+
+## Promoters parser
 def complement(seq):
     return seq.replace('A', 't').replace('T', 'a').replace('C', 'g').replace('G', 'c').upper()[::-1]
 
