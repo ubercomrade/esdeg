@@ -9,6 +9,7 @@ We developed approach that help to find TF plaing role in DEG.
   * scipy
   * pythran
   * pandas
+  * statsmodels
 
   You can use pip to install dependences `pip install numpy, scipy, statsmodels, pythran, pandas`,
   Or you can use conda `conda install numpy, scipy, statsmodels, pythran, pandas`
@@ -25,29 +26,33 @@ pip install -e .
 The command `ESDEG.py -h` return:
 
 ```
-usage: ESDEG.py [-h] {preparation,deg,set} ...
+usage: ESDEG.py [-h] {pwm_preparation,bamm_preparation,deg,set} ...
 
 positional arguments:
-  {preparation,deg,set}
+  {pwm_preparation,bamm_preparation,deg,set}
                         Available commands:
-    preparation         Run data base preparation
+    pwm_preparation     Run data base preparation (PWM models)
+    bamm_preparation    Run data base preparation (BaMM models, experimental!)
     deg                 Run test on DEGs
     set                 Run test on SET of genes
 
 options:
   -h, --help            show this help message and exit
+
 ```
 
 Command `enREST.py deg` is used for analisys DEGs (input of DEseq2 is used).
 
 Command `enREST.py set` is used for analisys SET of genes (input of gene list is used).
 
-Command `enREST.py Rpreparation` is used for preparing motif data base for next analisys (input of motifs in HOCOMOCO/MEME format is used).
+Command `enREST.py pwm_preparation` is used for preparing motif (PWM) data base for next analisys (input of motifs in HOCOMOCO/MEME format is used).
 
-## Preparation
+Command `enREST.py bamm_preparation` is used for preparing motif (BaMM) data base for next analisys.
+
+## Preparation (PWM)
 
 ```
-usage: ESDEG.py preparation [-h] [-f FORMAT] matrices N output
+usage: ESDEG.py pwm_preparation [-h] [-f FORMAT] matrices N output
 
 positional arguments:
   matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
@@ -150,6 +155,65 @@ Print help to STDOUT
 **Second optional argument** `-f; --format` :
 
 Options for `-f/--format ` are  _meme_ and _hocomoco_. You should choose value of parameter based on your input format data. The default value is _meme_.
+
+## Preparation (BaMM, experimental!)
+
+```
+usage: ESDEG.py bamm_preparation [-h] bamms N output order
+
+positional arguments:
+  bamms       Path to directory with list of subdirectories contained BaMM models. BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed
+  N           organism (hg38, mm10, tair10)
+  output      Name of directory to write output files
+  order       Order of BaMMs. Order have to be common for all models. Default is 2.
+
+options:
+  -h, --help  show this help message and exit
+```
+#### Required arguments description
+
+**First positional argument** `bamms`:
+
+It's PATH to DIRECTORY with list of subdirectories contained BaMM models [5]. Each subdirectory contains BaMM files (TAG_motif_1.ihbcp, TAG.hbcp). They must have the same TAG as the subdirectory name where files are placed. Prepared BaMM models can be downloaded from https://bammmotif.soedinglab.org (http://wwwuser.gwdg.de/~compbiol/bamm)
+
+Example:
+```
+DIRECTORY
+    │
+    ├── ERR1
+    │    ├── ERR1.hbcp
+    │    └── ERR1_motif_1.ihbcp
+    ├── FOXA1
+    │    ├── FOXA1.hbcp
+    │    └── FOXA1_motif_1.ihbcp
+    ├── FOXA2
+    │    ├── FOXA2.hbcp
+    │    └── FOXA2_motif_1.ihbcp
+    ├── GATA-1
+    │    ├── GATA-1.hbcp
+    │    └── GATA-1_motif_1.ihbcp
+    └── GATA-3
+         ├── GATA-3.hbcp
+         └── GATA-3_motif_1.ihbcp
+```
+
+**Second positional argument**  `N`:
+
+Options for `N` are _hg38_ or _mm10_. Depend on organism usage in research
+
+**Third positional argument** `output`:
+
+Directory to write prepared database of motifs.
+
+**Fourth positional argument** `order`:
+
+Order of BaMMs. Order have to be common for all models.
+
+#### Optional arguments description
+
+**First optional argument** `-h; --help` :
+
+Print help to STDOUT
 
 
 ## DEG case
@@ -319,7 +383,7 @@ hg38 \
 ESDEG generates output file in tsv format.
 Here is example of file:
 ```
-matrix  log(or) distance  pval  adj.pval genes
+motif  log(or) distance  pval  adj.pval genes
 OVOL1_HUMAN.H11MO.0.C 0.366649526240003 3.78217128582708  0.000278219178978296  0.000834657536934888  ENSG00000000971;ENSG00000008311;ENSG00000009694...
 AHR_HUMAN.H11MO.0.B -0.468957662848219  -2.86315741842022 0.00311620230691013 0.00623240461382027 ENSG00000009694;ENSG00000019549;ENSG00000021300...
 AIRE_HUMAN.H11MO.0.C  0.166577225854898 1.42032679890637  0.134777945940099 0.161733535128118 ENSG00000008311;ENSG00000009694;ENSG00000019549...
@@ -328,13 +392,13 @@ PBX1_HUMAN.H11MO.0.A  -0.0796380533521957 -1.1967039140339  0.274421836462296 0.
 PBX2_HUMAN.H11MO.0.C  0.243876166666887 1.77057549835486  0.0482711130305087  0.0724066695457631  ENSG00000000971;ENSG00000008311;ENSG00000009694...
 ```
 Where:
-**matrix** - name of motif from data base. Names depends on preparation step.
+**motif** - name of motif from data base. Names depends on preparation step.
 
 **log(or)** - it's -log2 transforamation of  odds ratio (OR). It could be defined as $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach (fraction approach). Also It could be defined as $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach (enrichment approach)
 
-**distance** - it's the euclidean distance of each factor calculated by using p-value and OR [5]. 
+**distance** - it's the euclidean distance of each factor calculated by using p-value and OR [6]. 
 
-**pval** - it's combined p-value culculated by Hartung method [6]. 
+**pval** - it's combined p-value culculated by Hartung method [7]. 
 
 **adj.pval** - adjasted p-value by Benjamini-Hochberg FDR correction. `statsmodels` is used to apply this correction. 
 
@@ -346,8 +410,9 @@ Where:
 2. Monier, B., McDermaid, A., Wang, C., Zhao, J., Miller, A., Fennell, A., & Ma, Q. (2019). IRIS-EDA: An integrated RNA-Seq interpretation system for gene expression data analysis. *PLOS Computational Biology*, *15*(2), e1006792. https://doi.org/10.1371/journal.pcbi.1006792
 3. Kulakovskiy, I. v., Vorontsov, I. E., Yevshin, I. S., Sharipov, R. N., Fedorova, A. D., Rumynskiy, E. I., Medvedeva, Y. A., Magana-Mora, A., Bajic, V. B., Papatsenko, D. A., Kolpakov, F. A., & Makeev, V. J. (2018). HOCOMOCO: Towards a complete collection of transcription factor binding models for human and mouse via large-scale ChIP-Seq analysis. *Nucleic Acids Research*, *46*(D1), D252–D259. https://doi.org/10.1093/nar/gkx1106
 4. Machanick, P., & Bailey, T. L. (2011). MEME-ChIP: motif analysis of large DNA datasets. *Bioinformatics*, *27*(12), 1696–1697. https://doi.org/10.1093/bioinformatics/btr189
-5. Puente-Santamaria, L., Wasserman, W. W., & Del Peso, L. (2019). TFEA.ChIP: a tool kit for transcription factor binding site enrichment analysis capitalizing on ChIP-seq datasets. Bioinformatics (Oxford, England), 35(24), 5339–5340. https://doi.org/10.1093/bioinformatics/btz573
-6. Hartung, J. (1999). A note on combining dependent tests of significance. Biometrical Journal, 41(7), 849-855.
+5. Ge, W., Meier, M., Roth, C., & Söding, J. (2021). Bayesian Markov models improve the prediction of binding motifs beyond first order. NAR genomics and bioinformatics, 3(2), lqab026. https://doi.org/10.1093/nargab/lqab026
+6. Puente-Santamaria, L., Wasserman, W. W., & Del Peso, L. (2019). TFEA.ChIP: a tool kit for transcription factor binding site enrichment analysis capitalizing on ChIP-seq datasets. Bioinformatics (Oxford, England), 35(24), 5339–5340. https://doi.org/10.1093/bioinformatics/btz573
+7. Hartung, J. (1999). A note on combining dependent tests of significance. Biometrical Journal, 41(7), 849-855.
 
 ## License
 

@@ -174,7 +174,7 @@ def get_deg_gene_ids(df, cond, padj_thr=0.05, log2fc_thr=1):
 
 def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
     log2fc_thr = abs(log2fc_thr)
-    #df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
+    df = df[np.logical_and(df['log2FoldChange'] >= -log2fc_thr, df['log2FoldChange'] <= log2fc_thr)]
     df = df[df['padj'] > padj_thr]
     gene_ids = np.array([i for i in df['id'] if isinstance(i, str)])
     return np.unique(gene_ids)

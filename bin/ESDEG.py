@@ -26,7 +26,7 @@ def parse_args():
     bamm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
          help='organism (hg38, mm10, tair10)')
     bamm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
-    bamm_preparation_parser.add_argument('order', action='store',  help='Order of BaMMs. Order have to be common for all models. Default is 2.', type=int, default=2)
+    bamm_preparation_parser.add_argument('-o', '--order', action='store',  help='Order of BaMMs. Order have to be common for all models. Default is 2.', type=int, default=2)
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')

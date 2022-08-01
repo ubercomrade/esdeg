@@ -34,7 +34,7 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
 
     results = []
     for index, matrix_name in enumerate(metadata['matrices'], 1):
-        line = {'matrix': matrix_name}
+        line = {'motif': matrix_name}
         print(f'{index} {matrix_name}')
         counts = np.load(f'{path_to_db}/{matrix_name}.npy')
         foreground, foreground_gc, other, other_gc, genes = split_by_gene_ids(counts,
@@ -48,7 +48,7 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
     df = pd.DataFrame(results)
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
-    df = df[['matrix', 'log(or)', 'distance', 'pval', 'adj.pval', 'genes']]
+    df = df[['motif', 'log(or)', 'distance', 'pval', 'adj.pval', 'genes']]
     df.to_csv(path_to_output, sep='\t', index=False)
     print('-'*30)
     print('All done. Exit')
