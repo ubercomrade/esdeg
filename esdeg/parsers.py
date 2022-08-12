@@ -29,11 +29,7 @@ def read_list_of_matrix_meme(path):
     with open(path) as file:
         for line in file:
             if line.startswith("MOTIF"):
-<<<<<<< HEAD:enrest/parsers.py
-                matrix_name = line.split()[-1]
-=======
                 matrix_name = '_'.join(line.split()[-1:])
->>>>>>> dev_esdeg:esdeg/parsers.py
                 for line in file:
                     if line.strip() != "":
                         length, nsites = map(int, itemgetter(*[5,7])(line.strip().split()))

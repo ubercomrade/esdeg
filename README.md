@@ -56,7 +56,7 @@ usage: ESDEG.py pwm_preparation [-h] [-f FORMAT] matrices N output
 
 positional arguments:
   matrices              Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format
-  N                     promoters of organism (hg38, mm10, tair10)
+  N                     promoters of organism (hg38, mm10, tair10, rnor6)
   output                Name of directory for output files
 
 options:
@@ -140,7 +140,7 @@ URL http://jaspar2018.genereg.net/matrix/MA0006.1
 
 **Second positional argument**  `N`:
 
-Options for `N` are _hg38_ or _mm10_. Depend on organism usage in research
+Options for `N` are _hg38_, _mm10_, _tair10_ or _rnor6_. Depend on organism usage in research
 
 **Third positional argument** `output`:
 
@@ -163,7 +163,7 @@ usage: ESDEG.py bamm_preparation [-h] [-o ORDER] bamms N output
 
 positional arguments:
   bamms                 Path to directory with list of subdirectories contained BaMM models. BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed
-  N                     organism (hg38, mm10, tair10)
+  N                     organism (hg38, mm10, tair10, rnor6)
   output                Name of directory to write output files
 
 options:
@@ -200,7 +200,7 @@ DIRECTORY
 
 **Second positional argument**  `N`:
 
-Options for `N` are _hg38_ or _mm10_. Depend on organism usage in research
+Options for `N` are _hg38_, _mm10_, _tair10_ or _rnor6_. Depend on organism usage in research
 
 **Third positional argument** `output`:
 

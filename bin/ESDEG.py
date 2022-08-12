@@ -15,7 +15,7 @@ def parse_args():
 
     pwm_preparation_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
     pwm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
-         help='organism (hg38, mm10, tair10)')
+         help='organism (hg38, mm10, tair10, rnor6)')
     pwm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
     pwm_preparation_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
                         metavar='FORMAT', type=str, default='meme', 
@@ -31,7 +31,7 @@ def parse_args():
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     deg_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
-         help='Organism (hg38, mm10, tair10)')
+         help='Organism (hg38, mm10, tair10, rnor6)')
     deg_parser.add_argument('output', action='store', help='Path to write table with results')
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
@@ -52,7 +52,7 @@ def parse_args():
     set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     set_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
-         help='Organism (hg38, mm10, tair10)')
+         help='Organism (hg38, mm10, tair10, rnor6)')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
