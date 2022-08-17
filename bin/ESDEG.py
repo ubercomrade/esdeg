@@ -14,7 +14,7 @@ def parse_args():
     set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
 
     pwm_preparation_parser.add_argument('matrices', action='store', help='Path to matrices in HOCOMOCO (PCM) or in MEME (PFM) format')
-    pwm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    pwm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
          help='organism (hg38, mm10, tair10, rnor6)')
     pwm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
     pwm_preparation_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
@@ -23,14 +23,14 @@ def parse_args():
 
     bamm_preparation_parser.add_argument('bamms', action='store', help='Path to directory with list of subdirectories contained BaMM models. \
                                          BaMM files (TAG_motif_1.ihbcp, TAG.hbcp) must have the same TAG as the subdirectory name where files are placed')
-    bamm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    bamm_preparation_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
          help='organism (hg38, mm10, tair10)')
     bamm_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
     bamm_preparation_parser.add_argument('-o', '--order', action='store',  help='Order of BaMMs. Order have to be common for all models. Default is 2.', type=int, default=2)
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    deg_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    deg_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
          help='Organism (hg38, mm10, tair10, rnor6)')
     deg_parser.add_argument('output', action='store', help='Path to write table with results')
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
@@ -51,7 +51,7 @@ def parse_args():
 
     set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    set_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6'], metavar='N',
+    set_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
          help='Organism (hg38, mm10, tair10, rnor6)')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
@@ -130,6 +130,9 @@ def main():
             path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif organism == 'rnor6':
             path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
+        elif organism == 'rnor6_ucsc':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ucsc.promoters.fa.xz")
+
 
         prepare_motif_db_pwm(path_to_db, 
                          output_dir, 
@@ -155,6 +158,8 @@ def main():
             path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif organism == 'rnor6':
             path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ensembl.promoters.fa.xz")
+        elif organism == 'rnor6_ucsc':
+            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ucsc.promoters.fa.xz")
 
         prepare_motif_db_bamm(path_to_db, 
                               order, 
