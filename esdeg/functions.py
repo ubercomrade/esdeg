@@ -148,12 +148,12 @@ def hartung(p):
 
 
 def split_by_gene_ids(counts, gc, ids, foreground_ids, other_ids):
-    _, index, index_foreground = np.intersect1d(ids, foreground_ids, assume_unique=True, return_indices=True) 
+    _, index, index_foreground = np.intersect1d(ids, foreground_ids, assume_unique=False, return_indices=True) 
     foreground_counts = counts[index]
     foreground_gc = gc[index]
     genes = ids[index]
     
-    _, index, index_other = np.intersect1d(ids, other_ids, assume_unique=True, return_indices=True) 
+    _, index, index_other = np.intersect1d(ids, other_ids, assume_unique=False, return_indices=True) 
     other_counts = counts[index]
     other_gc = gc[index]
     return foreground_counts, foreground_gc, other_counts, other_gc, genes
