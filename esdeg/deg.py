@@ -26,7 +26,7 @@ def deg_case(path_to_deg, path_to_db, path_to_output, organism,
     print('-'*30)
 
     print('Read DEG table')
-    deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
+    deg_table = pd.read_csv(path_to_deg, sep='\t', comment='#')
     deg_table = deg_table[deg_table['padj'] <= 1]
     foreground_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
     other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
