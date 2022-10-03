@@ -57,9 +57,6 @@ def parse_args():
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment', 
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
-    set_parser.add_argument('-f', '--format', action='store', choices=['meme', 'hocomoco'],
-                        metavar='FORMAT', type=str, default='meme', 
-                        help='Format of file with matrices (meme or hocomoco), default= meme')
     set_parser.add_argument('-c', '--content', action='store', type=float, default=0.3, 
                         help='The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. \
                         Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. \
@@ -102,7 +99,6 @@ def main():
         path_to_output = args.output
         organism = args.organism
         parameter = args.parameter
-        file_format = args.format
         gc_threshold = args.content
     
         set_case(path_to_set, 

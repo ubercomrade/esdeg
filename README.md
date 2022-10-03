@@ -1,7 +1,7 @@
 # ESDEG
 
 ## Introduction
-We developed approach that help to find TF plaing role in DEG. 
+We developed approach that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment. The application of our tool requires designation of species (options hg38, mm10 and tair10 respect human, mouse and Arabidopsis), an input list of gene ID of GEGs is required (Ensembl ID for human/mouse, TAIR ID for Arabidopsis)
 
 ## Python requirements
 
@@ -309,8 +309,6 @@ options:
   -h, --help            show this help message and exit
   -p PARAMETER, --parameter PARAMETER
                         Parameter estimated in test (enrichment or fraction), default= enrichment
-  -f FORMAT, --format FORMAT
-                        Format of file with matrices (meme or hocomoco), default= meme
   -c CONTENT, --content CONTENT
                         The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into
                         account. In this case (thr = 1.0) algorithm works faster. Default= 0.3.
