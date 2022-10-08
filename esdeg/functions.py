@@ -83,14 +83,13 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
     lpv = -np.log10(pv)
     
     #calculate distance
-    if np.log2(odds_ratio) > 0:
-        distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
-    else:
-        distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
+#     if np.log2(odds_ratio) > 0:
+#         distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
+#     else:
+#         distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
         
     #write results
     results = {'log(or)': np.log2(odds_ratio),
-               'distance': distance,
                'pval': pv,
                'genes': ';'.join(list(genes_with_bs))}
     return results
@@ -111,7 +110,7 @@ def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
         sample = other[index]
         random[i] = np.sum(sample, axis=0)
     random_mean, random_std = np.mean(random, axis=0), np.std(random, axis=0)
-    z_score = np.abs((real - random_mean) / random_std)
+    z_score = (real - random_mean) / random_std
     return z_score, np.mean(real / np.mean(random, axis=0))
 
 

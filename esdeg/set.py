@@ -28,15 +28,19 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
     
     
     print('Work with matrices')
-    number_of_matrices = len(metadata['matrices'])
+    number_of_matrices = len(metadata['motif_id'])
     print(f'Number of matrices = {number_of_matrices}')
     print('-'*30)
 
     results = []
-    for index, matrix_name in enumerate(metadata['matrices'], 1):
-        line = {'motif': matrix_name}
-        print(f'{index} {matrix_name}')
-        counts = np.load(f'{path_to_db}/{matrix_name}.npy')
+    for index, motif_id in enumerate(metadata['motif_id'], 1):
+        tf_name = metadata['tf_name'][index - 1]
+        tf_class = metadata['tf_class'][index - 1]
+        line = {'motif_id': motif_id,
+                'tf_name': tf_name,
+                'tf_class': tf_class}
+        print(f'{index} {motif_id} - {tf_name}')
+        counts = np.load(f'{path_to_db}/{motif_id}.npy')
         foreground, foreground_gc, other, other_gc, genes = split_by_gene_ids(counts,
                                                                               gc_content,
                                                                               ids,
@@ -48,7 +52,7 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
     df = pd.DataFrame(results)
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
-    df = df[['motif', 'log(or)', 'distance', 'pval', 'adj.pval', 'genes']]
+    df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
     df.to_csv(path_to_output, sep='\t', index=False)
     print('-'*30)
     print('All done. Exit')
