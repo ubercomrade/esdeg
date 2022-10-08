@@ -103,7 +103,6 @@ def main():
         taxon = args.taxon
         output_dir = args.output
         organism = args.organism
-        file_format = args.format
 
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
