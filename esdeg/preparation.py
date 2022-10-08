@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 from pyjaspar import jaspardb
-from esdeg.functions import get_threshold, calculate_gc, make_k_mers
+from esdeg.functions import get_threshold, calculate_gc, make_k_mers, jaspar_to_pwm
 from esdeg.parsers import promoters_parser
 import esdeg.speedup as sup
 
