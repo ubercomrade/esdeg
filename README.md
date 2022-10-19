@@ -3,6 +3,11 @@
 ## Introduction
 We developed approach that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment. The application of our tool requires designation of species (options hg38, mm10 and tair10 respect human, mouse and Arabidopsis), an input list of gene ID of GEGs is required (Ensembl ID for human/mouse, TAIR ID for Arabidopsis)
 
+* To see more detalies read article Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing\*
+* To use old version of tool (input in MEME format + BaMM) use _dev_bamm_ branch
+
+_\* Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
+
 ## Python requirements
 
   * numpy
@@ -42,11 +47,11 @@ options:
 
 ```
 
-Command `enREST.py deg` is used for analisys DEGs (input of DEseq2 is used).
+Command `ESDEG.py deg` is used for analisys DEGs (input of DEseq2 is used).
 
-Command `enREST.py set` is used for analisys SET of genes (input of gene list is used).
+Command `ESDEG.py set` is used for analisys SET of genes (input of gene list is used).
 
-Command `enREST.py preparation` is used for preparing motif (PWM) data base for next analisys (JASPAR motifs is used).
+Command `ESDEG.py preparation` is used for preparing motif (PWM) data base for next analisys (JASPAR motifs is used).
 
 ## Preparation (PWM)
 
@@ -69,7 +74,7 @@ options:
 **First positional argument** `matrices`:
 
 It's name of taxon that is avaliable in JASPAR database [1]. Possible options for taxon are plants, vertebrates, insects, urochordates, nematodes, fungi.
-Only motifs from CORE COLLECTION and with length >= 8 are used for analisys. 
+Only motifs from CORE COLLECTION and with length >= 8 are used for analisys.
 For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html
 
 **Second positional argument**  `N`:
@@ -274,11 +279,11 @@ Where:
 
 **log(or)** - it's -log2 transforamation of  odds ratio (OR). It could be defined as $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach (fraction approach). Also It could be defined as $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach (enrichment approach)
 
-**pval** - it's combined p-value culculated by Hartung method [5]. 
+**pval** - it's combined p-value culculated by Hartung method [5].
 
-**adj.pval** - adjasted p-value by Benjamini-Hochberg FDR correction. `statsmodels` is used to apply this correction. 
+**adj.pval** - adjasted p-value by Benjamini-Hochberg FDR correction. `statsmodels` is used to apply this correction.
 
-**genes** - list of genes with predicted sites (threshold(ERR) = 0.0005). 
+**genes** - list of genes with predicted sites (threshold(ERR) = 0.0005).
 
 ## Reference
 
