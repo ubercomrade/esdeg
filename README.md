@@ -199,7 +199,7 @@ usage: ESDEG.py set [-h] [-v VISUALIZATION] [-p PARAMETER] [-c CONTENT] set matr
 positional arguments:
   set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
   matrices              Path to prepared data base of matrices
-  N                     Organism (hg38, mm10, tair10, rnor6)
+  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)
   output                Path to write table with results
 
 options:

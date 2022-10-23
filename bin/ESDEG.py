@@ -46,8 +46,8 @@ def parse_args():
 
     set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    set_parser.add_argument('organism', action='store', choices=['mm10', 'hg38', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
-         help='Organism (hg38, mm10, tair10, rnor6)')
+    set_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
+         help='Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
                             help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
