@@ -18,8 +18,8 @@ _\* Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich,
   * biopython
   * pyjaspar
 
-  You can use pip to install dependences `pip install numpy, scipy, statsmodels, pythran, pandas, biopython, pyjaspar`,
-  Or you can use conda `conda install numpy, scipy, statsmodels, pythran, pandas, biopython, pyjaspar`
+  You can use pip to install dependences `pip install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar`,
+  Or you can use conda `conda install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar`
 
 ## Installation
 
@@ -58,13 +58,21 @@ Command `ESDEG.py preparation` is used for preparing motif (PWM) data base for n
 _Timing 40–120 min_
 
 ```
-usage: ESDEG.py preparation [-h] [-f FORMAT] matrices N output
+usage: ESDEG.py preparation [-h]
+                            {plants,vertebrates,insects,urochordates,nematodes,fungi}
+                            N output
 
 positional arguments:
-  taxon              Prepare database for respective JASPAR CORE taxonomic group of motifs. Possible options are plants, vertebrates, insects, urochordates, nematodes, fungi.
-                     For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html
-  N                  Promoters of organism (hg38, mm10, tair10, rnor6)
-  output             Name of directory for output files
+  {plants,vertebrates,insects,urochordates,nematodes,fungi}
+                        Prepare database for respective JASPAR CORE taxonomic
+                        group of motifs. Possible options are plants,
+                        vertebrates, insects, urochordates, nematodes, fungi.
+                        For more detailes see https://jaspar.uio.no/ and
+                        https://pyjaspar.readthedocs.io/en/latest/index.html
+  N                     Promoters of organism (hs - H. sapiens, mm - M.
+                        musculus, dm - D. melanogaster, dr - D. rerio, rn - R.
+                        norvegicus, tair10)
+  output                Name of directory to write output files
 
 options:
   -h, --help            show this help message and exit
@@ -96,28 +104,35 @@ Print help to STDOUT
 _Timing from 10 seconds to 5 minutes_
 
 ``````
-usage: ESDEG.py deg [-h] [-p PARAMETER] [-r N] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] [-c CONTENT] deg matrices N output
+usage: ESDEG.py deg [-h] [-v VISUALIZATION] [-p PARAMETER] [-r N] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK] [-c CONTENT]
+                    deg matrices N output
 
 positional arguments:
   deg                   TSV file with DEG with ..., The NAME column must contain ensemble gene IDS
   matrices              Path to prepared data base of matrices
-  N                     Organism (hg38, mm10, tair10)
+  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)
   output                Path to write table with results
 
 options:
   -h, --help            show this help message and exit
+  -v VISUALIZATION, --visualization VISUALIZATION
+                        Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates
+                        picutre. By default it isn't used
   -p PARAMETER, --parameter PARAMETER
                         Parameter estimated in test (enrichment or fraction), default= enrichment
   -r N, --regulated N   The parameter is used to choose up/down/all DEGs, default= all
   -P PVALUE, --pvalue PVALUE
                         The pvalue is used as threshold to choose DEGs, default= 0.05
   -l LOG2FC_DEG, --log2fc_deg LOG2FC_DEG
-                        The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1
+                        The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr),
+                        default= 1
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
-                        The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)
+                        The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr),
+                        default= log2(5/4)
   -c CONTENT, --content CONTENT
-                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into
-                        account. In this case (thr = 1.0) algorithm works faster. Default= 0.3.
+                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. Range
+                        of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. In
+                        this case (thr = 1.0) algorithm works faster. Default= 0.3.
 ``````
 
 #### Required arguments description
@@ -145,27 +160,31 @@ Path to write result table.
 
 Print help to STDOUT
 
-**Second optional argument** `-p; --parameter` :
+**Second optional argument** `-v; --visualization` :
+
+It's PATH to write HTML report (picture). Plotly is used for visualization.
+
+**Third optional argument** `-p; --parameter` :
 
 The value of `-p; --parameter ` could be  _enrichment_ or _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
 
-**Third optional argument** `-r; --regulated` :
+**Fourth optional argument** `-r; --regulated` :
 
 The argument `-r/--regulated` are used to choose type of DEGs in analisys. It could be `down` -> promoters of down regulated genes will be used in analisys; `up` -> promoters of up regulated genes will be used in analisys; `all` -> promoters of  up and down regulated genes will be used in analisys. The default value is _all_.
 
-**Fourth optional argument** `-p; --pvalue` :
+**Fifth optional argument** `-p; --pvalue` :
 
 The argument  `-p; --pvalue ` is pvalue cutoff for DEGs choosing (DEGs <= pvalue). The default value is _0.05_.
 
-**Fifth optional argument** `-l; --log2fc_deg` :
+**Sixth optional argument** `-l; --log2fc_deg` :
 
 The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DEGs >= Log2FoldChange OR DEGs <= -Log2FoldChange). The default value is _1_.
 
-**Sixth optional argument** `-l; --log2fc_back` :
+**Seventh optional argument** `-l; --log2fc_back` :
 
 The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4)_.
 
-**Seventh optional argument** `-c; --content` :
+**Eighth optional argument** `-c; --content` :
 
 The argument `-c; --content` is used to set threshold of GC content for generating background.
 
@@ -175,21 +194,25 @@ The argument `-c; --content` is used to set threshold of GC content for generati
 _Timing from 10 seconds to 5 minutes_
 
 ````
-sage: ESDEG.py set [-h] [-p PARAMETER] [-f FORMAT] [-c CONTENT] set matrices N output
+usage: ESDEG.py set [-h] [-v VISUALIZATION] [-p PARAMETER] [-c CONTENT] set matrices N output
 
 positional arguments:
   set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
   matrices              Path to prepared data base of matrices
-  N                     Organism (hg38, mm10, tair10)
+  N                     Organism (hg38, mm10, tair10, rnor6)
   output                Path to write table with results
 
 options:
   -h, --help            show this help message and exit
+  -v VISUALIZATION, --visualization VISUALIZATION
+                        Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates
+                        picutre. By default it isn't used
   -p PARAMETER, --parameter PARAMETER
                         Parameter estimated in test (enrichment or fraction), default= enrichment
   -c CONTENT, --content CONTENT
-                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into
-                        account. In this case (thr = 1.0) algorithm works faster. Default= 0.3.
+                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. Range
+                        of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. In
+                        this case (thr = 1.0) algorithm works faster. Default= 0.3.
 ````
 
 #### Required arguments description
@@ -225,11 +248,15 @@ Path to write result table.
 
 Print help to STDOUT
 
-**Second optional argument** `-p; --parameter` :
+**Second optional argument** `-v; --visualization` :
+
+It's PATH to write HTML report (picture). Plotly is used for visualization.
+
+**Third optional argument** `-p; --parameter` :
 
 Options for `-p; --parameter ` are  _enrichment_ and _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
 
-**Third optional argument** `-c; --content` :
+**Fourth optional argument** `-c; --content` :
 
 The argument `-c; --content` is used to set threshold of GC content for generating background.\
 
