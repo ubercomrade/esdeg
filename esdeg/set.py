@@ -6,9 +6,9 @@ from esdeg.functions import run_test, get_other_gene_ids_for_set_case, split_by_
 from esdeg.parsers import read_set_of_genes
 
 
-def set_case(path_to_set, path_to_db, path_to_output, organism, 
-             parameter="enrichment", gc_threshold=0.25): 
-    
+def set_case(path_to_set, path_to_db, organism,
+             parameter="enrichment", gc_threshold=0.25):
+
     print('Read metadata')
     file = open(f'{path_to_db}/metadata.json')
     metadata = json.load(file)
@@ -25,8 +25,8 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
     foreground_ids = read_set_of_genes(path_to_set)
     other_ids = get_other_gene_ids_for_set_case(foreground_ids, ids)
     print('-'*30)
-    
-    
+
+
     print('Work with matrices')
     number_of_matrices = len(metadata['motif_id'])
     print(f'Number of matrices = {number_of_matrices}')
@@ -52,8 +52,5 @@ def set_case(path_to_set, path_to_db, path_to_output, organism,
     df = pd.DataFrame(results)
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
-    df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
-    df.to_csv(path_to_output, sep='\t', index=False)
     print('-'*30)
-    print('All done. Exit')
-    return None
+    return df

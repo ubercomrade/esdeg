@@ -5,14 +5,14 @@ from statsmodels.stats.multitest import multipletests
 from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids
 
 
-def deg_case(path_to_deg, path_to_db, path_to_output, organism,
-             parameter='enrichment', 
+def deg_case(path_to_deg, path_to_db, organism,
+             parameter='enrichment',
              padj_thr=0.05,
              log2fc_thr_deg=1,
              log2fc_thr_background=np.log2(5/4),
              gc_threshold=0.25,
              condition='down'):
-    
+
     print('Read metadata')
     file = open(f'{path_to_db}/metadata.json')
     metadata = json.load(file)
@@ -57,7 +57,5 @@ def deg_case(path_to_deg, path_to_db, path_to_output, organism,
     df = pd.DataFrame(results)
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
-    df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
-    df.to_csv(path_to_output, sep='\t', index=False)
     print('-'*30)
-    pass
+    return df
