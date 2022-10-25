@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import pkg_resources
 from esdeg.set import set_case
 from esdeg.deg import deg_case
 from esdeg.preparation import prepare_motif_db
