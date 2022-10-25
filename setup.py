@@ -25,8 +25,8 @@ setup(
     package_dir={'esdeg' : 'esdeg'},
     packages=['esdeg'],
     package_data={
-        'data': ['*.xz'],
-        'tomtom': ['*.tsv'],
+        'esdeg': ['data/*.xz'],
+        'esdeg': ['tomtom/*.tsv'],
     },
     scripts=['bin/ESDEG.py',],
     classifiers=[

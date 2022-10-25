@@ -121,21 +121,21 @@ def main():
 
         this_dir, this_filename = os.path.split(__file__)
         if organism == 'mm':
-            path_to_promoters = os.path.join(this_dir, "../data", "mm.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/mm.ensembl.promoters.fa.xz')
         elif organism == 'hs':
-            path_to_promoters = os.path.join(this_dir, "../data", "hs.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/hs.ensembl.promoters.fa.xz')
         elif organism == 'dm':
-            path_to_promoters = os.path.join(this_dir, "../data", "dm.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/dm.ensembl.promoters.fa.xz')
         elif organism == 'dr':
-            path_to_promoters = os.path.join(this_dir, "../data", "dr.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/dr.ensembl.promoters.fa.xz')
         elif organism == 'rn':
-            path_to_promoters = os.path.join(this_dir, "../data", "rn.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/rn.ensembl.promoters.fa.xz')
         elif organism == 'ce':
-            path_to_promoters = os.path.join(this_dir, "../data", "ce.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/ce.ensembl.promoters.fa.xz')
         elif organism == 'tair10':
-            path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/tair10.ensembl.promoters.fa.xz')
         elif organism == 'rnor6_ucsc':
-            path_to_promoters = os.path.join(this_dir, "../data", "rnor6.ucsc.promoters.fa.xz")
+            path_to_promoters = pkg_resources.resource_filename('esdeg', 'data/rnor6.ucsc.promoters.fa.xz')
 
         prepare_motif_db(output_dir,
             path_to_promoters,
