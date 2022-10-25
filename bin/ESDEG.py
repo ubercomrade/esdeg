@@ -17,14 +17,14 @@ def parse_args():
     preparation_parser.add_argument('taxon', action='store', choices=['plants', 'vertebrates', 'insects', 'urochordates', 'nematodes', 'fungi'],
         help='Prepare database for respective JASPAR CORE taxonomic group of motifs. Possible options are plants, vertebrates, insects, urochordates, nematodes, fungi. \
         For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html')
-    preparation_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
-         help='Promoters of organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)')
+    preparation_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'ce', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
+         help='Promoters of organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, ce - C. elegans, tair10)')
     preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
     deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    deg_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
-         help='Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)')
+    deg_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'ce', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
+         help='Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, ce - C. elegans, tair10)')
     deg_parser.add_argument('output', action='store', help='Path to write table with results')
     deg_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
                             help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
@@ -46,8 +46,8 @@ def parse_args():
 
     set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    set_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
-         help='Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)')
+    set_parser.add_argument('organism', action='store', choices=['mm', 'hs', 'dm', 'dr', 'rn', 'ce', 'tair10', 'rnor6', 'rnor6_ucsc'], metavar='N',
+         help='Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, ce - C. elegans, tair10)')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
                             help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
@@ -130,6 +130,8 @@ def main():
             path_to_promoters = os.path.join(this_dir, "../data", "dr.ensembl.promoters.fa.xz")
         elif organism == 'rn':
             path_to_promoters = os.path.join(this_dir, "../data", "rn.ensembl.promoters.fa.xz")
+        elif organism == 'ce':
+            path_to_promoters = os.path.join(this_dir, "../data", "ce.ensembl.promoters.fa.xz")
         elif organism == 'tair10':
             path_to_promoters = os.path.join(this_dir, "../data", "tair10.ensembl.promoters.fa.xz")
         elif organism == 'rnor6_ucsc':

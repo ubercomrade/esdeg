@@ -71,7 +71,7 @@ positional arguments:
                         https://pyjaspar.readthedocs.io/en/latest/index.html
   N                     Promoters of organism (hs - H. sapiens, mm - M.
                         musculus, dm - D. melanogaster, dr - D. rerio, rn - R.
-                        norvegicus, tair10)
+                        norvegicus, ce - C. elegans, tair10)
   output                Name of directory to write output files
 
 options:
@@ -110,7 +110,7 @@ usage: ESDEG.py deg [-h] [-v VISUALIZATION] [-p PARAMETER] [-r N] [-P PVALUE] [-
 positional arguments:
   deg                   TSV file with DEG with ..., The NAME column must contain ensemble gene IDS
   matrices              Path to prepared data base of matrices
-  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)
+  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, ce - C. elegans, tair10)
   output                Path to write table with results
 
 options:
@@ -199,7 +199,7 @@ usage: ESDEG.py set [-h] [-v VISUALIZATION] [-p PARAMETER] [-c CONTENT] set matr
 positional arguments:
   set                   File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)
   matrices              Path to prepared data base of matrices
-  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, tair10)
+  N                     Organism (hs - H. sapiens, mm - M. musculus, dm - D. melanogaster, dr - D. rerio, rn - R. norvegicus, ce - C. elegans, tair10)
   output                Path to write table with results
 
 options:
