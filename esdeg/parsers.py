@@ -13,16 +13,15 @@ def complement(seq):
 def promoters_parser(path):
     container = []
     gname = ''
-    with lzma.open(path) as file:
+    with open(path) as file:
         for line in file:
-            line = line.decode()
             if not line.startswith('>'):
                 seq = line.strip().upper()
                 seq += complement(seq)
                 container.append((gname, seq))
             else:
                 gname = line.strip().split(':')[0][1:]
-    container.sort(key=itemgetter(0)) 
+    container.sort(key=itemgetter(0))
     promoters_ids = [i[0] for i in container]
     promoters = [i[1] for i in container]
     return promoters, np.array(promoters_ids)
@@ -38,7 +37,7 @@ def fasta_parser(path):
                 fasta.append(seq)
     return fasta
 
-    
+
 def read_set_of_genes(path):
     container = []
     with open(path) as file:

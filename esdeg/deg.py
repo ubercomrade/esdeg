@@ -5,7 +5,7 @@ from statsmodels.stats.multitest import multipletests
 from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids
 
 
-def deg_case(path_to_deg, path_to_db, organism,
+def deg_case(path_to_deg, path_to_db,
              parameter='enrichment',
              padj_thr=0.05,
              log2fc_thr_deg=1,
@@ -17,10 +17,6 @@ def deg_case(path_to_deg, path_to_db, organism,
     file = open(f'{path_to_db}/metadata.json')
     metadata = json.load(file)
     file.close()
-    if metadata['organism'] != organism:
-        md_org = metadata['organism']
-        print(f'DB was prepared for {md_org}, but you try to use it for {organism}. Exit.')
-        os.exit()
     gc_content = np.array(metadata['gc'])
     ids = np.array(metadata['ids'])
     print('-'*30)
@@ -29,6 +25,10 @@ def deg_case(path_to_deg, path_to_db, organism,
     deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
     deg_table = deg_table[deg_table['padj'] <= 1]
     foreground_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
+    check_intersection = np.sum(np.in1d(foreground_ids, ids, assume_unique=True))
+    if check_intersection == 0:
+        print(f'There are no common IDs in the database with the DEG IDs. Maybe different identifiers are used. Exit.')
+        os.exit()
     other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
     print('-'*30)
 

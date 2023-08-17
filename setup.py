@@ -25,7 +25,6 @@ setup(
     package_dir={'esdeg' : 'esdeg'},
     packages=['esdeg'],
     package_data={
-        'esdeg': ['data/*.xz'],
         'esdeg': ['tomtom/*.tsv'],
     },
     scripts=['bin/ESDEG.py',],
