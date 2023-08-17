@@ -18,8 +18,8 @@ def parse_args():
     preparation_parser.add_argument('taxon', action='store', choices=['plants', 'vertebrates', 'insects', 'urochordates', 'nematodes', 'fungi'],
         help='Prepare database for respective JASPAR CORE taxonomic group of motifs. Possible options are plants, vertebrates, insects, urochordates, nematodes, fungi. \
         For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html')
-    preparation_parser.add_argument('promoters', action='store', metavar='N',
-         help='Path to promoters in fasta format. All promoters have to be with same length. After ">" unique gene ID have to be writen (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
+    preparation_parser.add_argument('promoters', action='store', metavar='promoters',
+         help='Path to promoters in fasta format. All promoters have to be with same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
     preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
 
     deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
