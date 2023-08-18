@@ -299,6 +299,7 @@ ESDEG.py deg \
 ./E-GEOD-48230-query-results.csv \
 ./matrices_db \
 ./ovol1.montecarlo.enrichment.tsv \
+--visualization ./ovol1.montecarlo.enrichment.html \
 --parameter enrichment \
 --regulated down
 ```

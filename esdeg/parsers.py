@@ -1,6 +1,5 @@
 import os
 import sys
-import lzma
 import numpy as np
 from operator import itemgetter
 
