@@ -105,7 +105,7 @@ For more details see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/
 
 Argument `promoters` is the path to file with promoters in FASTA format. Promoters have to have same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)
 
-(Example)[https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz]:
+[Example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz):
 ```
 >ENSG00000160072::1:1469886-1472284
 ACATTCCACCATTGTGATTTGTTTCTGCCCCACCCTAG...
