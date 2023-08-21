@@ -378,6 +378,10 @@ Where:
 4. Monier, B., McDermaid, A., Wang, C., Zhao, J., Miller, A., Fennell, A., & Ma, Q. (2019). IRIS-EDA: An integrated RNA-Seq interpretation system for gene expression data analysis. *PLOS Computational Biology*, *15*(2), e1006792. https://doi.org/10.1371/journal.pcbi.1006792
 5. Hartung, J. (1999). A note on combining dependent tests of significance. Biometrical Journal, 41(7), 849-855.
 
+## Citing
+
+Oshchepkov, D., Chadaeva, I., Kozhemyakina, R., Shikhevich, S., Sharypova, E., Savinkova, L., Klimova, N. V., Tsukanov, A., Levitsky, V. G., & Markel, A. L. (2022). Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing. International journal of molecular sciences, 23(20), 12269. https://doi.org/10.3390/ijms232012269
+
 ## License
 
 Copyright (c) 2021 Anton Tsukanov
