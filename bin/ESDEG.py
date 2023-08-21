@@ -35,15 +35,15 @@ def parse_args():
     deg_parser.add_argument('-P', '--pvalue', action='store', type=float, default=0.05,
                         help='The pvalue is used as threshold to choose DEGs, default= 0.05')
     deg_parser.add_argument('-l', '--log2fc_deg', action='store', type=float, default=1.,
-                        help='The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1')
+                        help='The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1.0')
     deg_parser.add_argument('-L', '--log2fc_back', action='store', type=float, default=0.32192809488736235,
-                        help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)')
+                        help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)=0.321928...')
     deg_parser.add_argument('-c', '--content', action='store', type=float, default=0.3,
                         help='The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. \
                         Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. \
                         In this case (thr = 1.0) algorithm works faster. Default= 0.3.')
 
-    set_parser.add_argument('set', action='store', help='File with list of genes. Genes must be in Ensemble format (ensemble gene IDS)')
+    set_parser.add_argument('set', action='store', help='File with list of genes.')
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',

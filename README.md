@@ -3,12 +3,20 @@
 ## Introduction
 We developed approach that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment.
 
-* To see more details read article Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing\*
-* To use old version of tool (input in MEME format + BaMM) use _dev_bamm_ branch
+* To see more details read article _Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
 
-_\* Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
 
-## Python requirements
+## Requirements
+
+ESDEG is a command-line toolkit and Python package for estimating the enrichment of motifs in promoters. ESDEG runs on [Python](https://www.python.org/) 3.7 and later. Your operating system might already provide Python, which you can check on the command line:
+
+```
+python --version
+```
+### Python dependencies
+
+If you haven't already satisfied these dependencies on your system, install
+these Python packages via ``pip``:
 
   * numpy
   * scipy
@@ -18,8 +26,9 @@ _\* Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich,
   * biopython
   * pyjaspar
 
-  You can use pip to install dependences `pip install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar`,
-  Or you can use conda `conda install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar`
+```
+pip install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar
+```
 
 ## Installation
 
@@ -47,13 +56,19 @@ options:
 
 ```
 
-Command `ESDEG.py deg` is used for analisys DEGs (input of DEseq2 is used).
+ESDEG includes three subcommands: `preparation`, `deg` and `set`.
 
-Command `ESDEG.py set` is used for analisys SET of genes (input of gene list is used).
+The first step is to prepare the database using the command `preparation`. This step requires motifs, which are taken from JASPAR, as well as promoters of the same length in FASTA format ([example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz)), which are set by the user. The results of subcommand `preparation` is database that includes motifs search results in `.npy` format. This database is further used as an input for `deg` and `set` subcommands.
 
-Command `ESDEG.py preparation` is used for preparing motif (PWM) data base for next analisys (JASPAR motifs is used).
+The next step is depending on type of input data.
 
-## Preparation (PWM)
+If you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)) you should use subcommand `deg`.
+
+If you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt)) you should use subcommand `set`.
+
+## Preparation
+
+This subcommand includes extraction motifs from Jaspar and scanning all given promoters by motifs. The database is calculated for a given set of promoters and motifs. Once the database has been calculated, it can be used to search for enriched motifs.
 
 _Timing 40–120 min_
 
@@ -67,7 +82,7 @@ positional arguments:
                         Prepare database for respective JASPAR CORE taxonomic
                         group of motifs. Possible options are plants,
                         vertebrates, insects, urochordates, nematodes, fungi.
-                        For more detailes see https://jaspar.uio.no/ and
+                        For more details see https://jaspar.uio.no/ and
                         https://pyjaspar.readthedocs.io/en/latest/index.html
   promoters             Path to promoters in fasta format. All promoters have
                         to be with same length. After ">" unique gene ID have
@@ -82,15 +97,15 @@ options:
 
 **First positional argument** `matrices`:
 
-It's name of taxon that is avaliable in JASPAR database [1]. Possible options for taxon are plants, vertebrates, insects, urochordates, nematodes, fungi.
-Only motifs from CORE COLLECTION and with length >= 8 are used for analisys.
-For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html
+It's name of taxon that is avaliable in JASPAR database [1]. Possible options for taxon are _plants_, _vertebrates_, _insects_, _urochordates_, _nematodes_, _fungi_.
+Only motifs from CORE COLLECTION and with length >= 8 are used for analysis.
+For more details see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html
 
-**Second positional argument**  `promoters`:
+**Second positional argument** `promoters`:
 
-Argument `promoters` is the path to promoters in FASTA format. Promoters have to have same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)
+Argument `promoters` is the path to file with promoters in FASTA format. Promoters have to have same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)
 
-Example:
+(Example)[https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz]:
 ```
 >ENSG00000160072::1:1469886-1472284
 ACATTCCACCATTGTGATTTGTTTCTGCCCCACCCTAG...
@@ -114,6 +129,8 @@ Directory to write prepared database of motifs.
 Print help to STDOUT
 
 ## DEG case
+
+This subcommand is used when you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in differentially expressed genes compared to a background. Differentially expressed genes are determined by parameters: `--pvalue` and `--log2fc_deg`. Background is determined by parameters: `--pvalue` and `--log2fc_back`. See below.
 
 _Timing from 10 seconds to 5 minutes_
 
@@ -149,7 +166,7 @@ options:
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
                         The absolute value of log2FoldChange used as threshold
                         to choose background promoters (-thr <= BACK <= thr),
-                        default= log2(5/4)
+                        default= log2(5/4)=0.376287495
   -c CONTENT, --content CONTENT
                         The maximal GC content difference between promoters of
                         foreground and background in Monte Carlo algorithm.
@@ -163,7 +180,21 @@ options:
 
 **First positional argument** `deg` :
 
-It's PATH to your Tab-separated file with full list of DEGs with columns: id, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj. Same table can be generated by DESeq2 [3] (https://bioconductor.org/packages/release/bioc/html/DESeq2.html) or IRIS [4] (https://bmbls.bmi.osumc.edu/IRIS/). The first column (with name id) must contain ensemble ids for genes.
+It's PATH to your Comma-separated file with full list of DEGs with required columns: id, log2FoldChange, padj ([**example**](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). Similar table can be generated by DESeq2 [3] (https://bioconductor.org/packages/release/bioc/html/DESeq2.html) or IRIS [4] (https://bmbls.bmi.osumc.edu/IRIS/).
+
+Example:
+```
+id,log2FoldChange,padj
+ENSG00000000003,-0.2,0.472804281
+ENSG00000000419,0.2,0.46039097
+ENSG00000000457,-0.1,0.841129918
+ENSG00000000460,0.2,0.534296601
+ENSG00000000971,-1.4,1.06E-05
+ENSG00000001036,0.1,0.81968747
+ENSG00000001167,-0.2,0.444068007
+ENSG00000001460,-0.1,0.808782152
+```
+**!IMPORTANT! You have to use the same gene IDs as those used in the preparation step for promoters**
 
 **Second positional argument** `matrices`:
 
@@ -190,7 +221,7 @@ The value of `-p; --parameter ` could be  _enrichment_ or _fraction_. If you cho
 
 **Fourth optional argument** `-r; --regulated` :
 
-The argument `-r/--regulated` are used to choose type of DEGs in analisys. It could be `down` -> promoters of down regulated genes will be used in analisys; `up` -> promoters of up regulated genes will be used in analisys; `all` -> promoters of  up and down regulated genes will be used in analisys. The default value is _all_.
+The argument `-r/--regulated` are used to choose type of DEGs in analysis. It could be `down` -> promoters of down regulated genes will be used in analysis; `up` -> promoters of up regulated genes will be used in analysis; `all` -> promoters of  up and down regulated genes will be used in analysis. The default value is _all_.
 
 **Fifth optional argument** `-p; --pvalue` :
 
@@ -202,7 +233,7 @@ The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DE
 
 **Seventh optional argument** `-l; --log2fc_back` :
 
-The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4)_.
+The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4) = 0.376287495_.
 
 **Eighth optional argument** `-c; --content` :
 
@@ -211,6 +242,8 @@ The argument `-c; --content` is used to set threshold of GC content for generati
 
 ## SET case
 
+This subcommand is used when you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in a given set of genes (foreground) compared to a background. Background includes all genes from database except given as a foreground.
+
 _Timing from 10 seconds to 5 minutes_
 
 ````
@@ -218,8 +251,7 @@ usage: ESDEG.py set [-h] [-v VISUALIZATION] [-p PARAMETER] [-c CONTENT]
                     set matrices output
 
 positional arguments:
-  set                   File with list of genes. Genes must be in Ensemble
-                        format (ensemble gene IDS)
+  set                   File with list of genes.
   matrices              Path to prepared data base of matrices
   output                Path to write table with results
 
@@ -245,8 +277,7 @@ options:
 
 **First positional argument** `set` :
 
-It's PATH to your SET of genes. Example:
-
+It's PATH to your SET of genes. [Example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt):
 ```
 ENSG00000072415
 ENSG00000094796
@@ -255,6 +286,7 @@ ENSG00000038427
 ENSG00000186480
 ...
 ```
+**!IMPORTANT! You have to use the same gene IDs as those used in the preparation step for promoters**
 
 **Second positional argument** `matrices`:
 
