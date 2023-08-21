@@ -56,19 +56,19 @@ options:
 
 ```
 
-ESDEG includes three subcommands: `preparation`, `deg` and `set`.
+ESDEG includes three commands: `preparation`, `deg` and `set`.
 
-The first step is to prepare the database using the command `preparation`. This step requires motifs, which are taken from JASPAR, as well as promoters of the same length in FASTA format ([example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz)), which are set by the user. The results of subcommand `preparation` is database that includes motifs search results in `.npy` format. This database is further used as an input for `deg` and `set` subcommands.
+The first step is to prepare the database using the command `preparation`. This step requires motifs, which are taken from JASPAR, as well as promoters of the same length in FASTA format ([example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz)), which are set by the user. The results of command `preparation` is database that includes motifs search results in `.npy` format. This database is further used as an input for `deg` and `set` commands.
 
 The next step is depending on type of input data.
 
-If you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)) you should use subcommand `deg`.
+If you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)) you should use command `deg`.
 
-If you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt)) you should use subcommand `set`.
+If you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt)) you should use command `set`.
 
 ## Preparation
 
-This subcommand includes extraction motifs from Jaspar and scanning all given promoters by motifs. The database is calculated for a given set of promoters and motifs. Once the database has been calculated, it can be used to search for enriched motifs.
+This command includes extraction motifs from Jaspar and scanning all given promoters by motifs. The database is calculated for a given set of promoters and motifs. Once the database has been calculated, it can be used to search for enriched motifs.
 
 _Timing 40–120 min_
 
@@ -130,7 +130,7 @@ Print help to STDOUT
 
 ## DEG case
 
-This subcommand is used when you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in differentially expressed genes compared to a background. Differentially expressed genes are determined by parameters: `--pvalue` and `--log2fc_deg`. Background is determined by parameters: `--pvalue` and `--log2fc_back`. See below.
+This command is used when you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in differentially expressed genes compared to a background. Differentially expressed genes are determined by parameters: `--pvalue` and `--log2fc_deg`. Background is determined by parameters: `--pvalue` and `--log2fc_back`. See below.
 
 _Timing from 10 seconds to 5 minutes_
 
@@ -242,7 +242,7 @@ The argument `-c; --content` is used to set threshold of GC content for generati
 
 ## SET case
 
-This subcommand is used when you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in a given set of genes (foreground) compared to a background. Background includes all genes from database except given as a foreground.
+This command is used when you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in a given set of genes (foreground) compared to a background. Background includes all genes from database except given as a foreground.
 
 _Timing from 10 seconds to 5 minutes_
 
