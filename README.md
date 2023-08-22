@@ -211,9 +211,9 @@ ENSG00000001036,0.1,0.81968747
 ENSG00000001167,-0.2,0.444068007
 ENSG00000001460,-0.1,0.808782152
 ```
-<span style="color:red">
-**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
-</span>
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) **IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
+
 
 **Second positional argument** `matrices`:
 
@@ -305,9 +305,7 @@ ENSG00000038427
 ENSG00000186480
 ...
 ```
-<span style="color:red">
-**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
-</span>
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) **IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
 
 **Second positional argument** `matrices`:
 
