@@ -1,7 +1,8 @@
 # ESDEG
 
 ## Introduction
-We developed approach that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment.
+We developed tool ESDEG that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment. We applied this tool to perform analysis on promoters of the genes upregulated and downregulated in the brain tissue samples of tame rats [^a].
+To identify enriched motifs, we first performed motif recognition in the given set of promoter (upstream regions of the same length), utilizing each from a library of nucleotide frequency matrices taken from the [JASPAR](https://jaspar.uio.no/). Next, a table of recognition thresholds was compiled as described in works[^b][^c], where expected recognition rates (ERRs) for each threshold were calculated as probabilities of site prediction in the whole-genome dataset of promoters. Given that the enrichment of sites depends on a chosen threshold, subsequent calculations were performed for 30 recognition thresholds (equidistant on a logarithmic scale of ERRs) in the range of 5 × 10E−4 to 1 × 10E−4. Next, all promoters were categorized into either a foreground or background group. The foreground group contained the promoters of the significantly DEGs: either only upregulated or only downregulated or both upregulated and downregulated genes. The set parameters (adjusted p-value and log2(fold change)) were used to determine whether a gene was differentially expressed. The background group included the same number of promoters as the foreground group, but they were randomly selected from none-DEGs according to given parameters (adjusted p-value, log2(fold change) and G/C content) and have the same G/C content as foreground . Next, we calculated the frequency of a motif in each of the gene promoter groups. To estimate the significance of the motif enrichment, the Monte Carlo approach was applied. For a given motif and a recognition threshold, site frequency was calculated for the foreground group (AVFOR), whereas a background group was generated many times to estimate the site frequency distribution. Next, the average (AVBACK) and standard deviation (SDBACK) for the frequencies in the background group set were calculated. Then, a Z-score was calculated according to the formula (AVFOR − AVBACK)/SDBACK. This Z-score allowed us to compute the significance of enrichment (p-value) by fitting a site’s frequency distribution to a normal distribution. To confirm enrichment for a given motif, multiple p-values were combined, referring all recognition thresholds into a single unified p-value according to the Hartung method [^5]. Thus, a unified p-value was calculated for each motif. Finally, an adjusted p-value (padj) was calculated from the set of unified p-values for all motifs with the Benjamini–Hochberg correction for multiple comparisons; in this way, our analysis involved multiple simultaneous statistical tests for various motifs.
 
 * You can find more details in article _Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
 
@@ -58,17 +59,17 @@ options:
 
 ESDEG includes three commands: `preparation`, `deg` and `set`.
 
-The first step is to prepare the database using the command `preparation`. This step requires motifs, which are taken from JASPAR, as well as promoters of the same length in FASTA format ([example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz)), which are set by the user. The results of command `preparation` is database that includes motifs search results in `.npy` format. This database is further used as an input for `deg` and `set` commands.
+The first step is to prepare the database using the command `preparation`. This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.uio.no/), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
 
 The next step is depending on type of input data.
 
-If you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)) you should use command `deg`.
+If you have the results of RNA-seq analysis of different gene expression ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)) you should use command `deg`.
 
-If you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt)) you should use command `set`.
+If you have only set of genes without any additional information as log2(fold change) and p-value adjusted ([example](https://github.com/ubercomrade/esdeg/blob/main/example/HALLMARK_TNFA_SIGNALING_VIA_NFKB.txt)) you should use command `set`.
 
 ## Preparation
 
-This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.uio.no/), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command preparation represent a database including the list of motifs and their annotations in .npy format. This database is used further as an input for deg and set commands.
+This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.uio.no/), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
 
 _Timing 40–120 min_
 
@@ -85,7 +86,7 @@ positional arguments:
                         For more details see https://jaspar.uio.no/ and
                         https://pyjaspar.readthedocs.io/en/latest/index.html
   promoters             Path to promoters in fasta format. All promoters have
-                        to be with same length. After ">" unique gene ID have
+                        to be with same length. After the symbol ">" unique gene ID has
                         to be written (>ENSG00000160072::1:1469886-1472284 or
                         >ENSG00000160072)
   output                Name of directory to write output files
@@ -103,7 +104,7 @@ For more details see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/
 
 **Second positional argument** `promoters`:
 
-Argument `promoters` is the path to file with promoters in FASTA format. Promoters have to have same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)
+Argument `promoters` is the path to file with promoters in FASTA format. Promoters should have same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)
 
 [Example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz):
 ```
@@ -130,7 +131,7 @@ Print help to STDOUT
 
 ## DEG case
 
-This command is used when you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in differentially expressed genes compared to a background. Differentially expressed genes are determined by parameters: `--pvalue` and `--log2fc_deg`. Background is determined by parameters: `--pvalue` and `--log2fc_back`. See below.
+This command is used when you have comma-separated table including results of differentially expressed genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in differentially expressed genes (foreground) compared to a background. Differentially expressed genes are determined by the parameters: `--pvalue` and `--log2fc_deg`. Background is determined by the parameters: `--pvalue` and `--log2fc_back`. See below.
 
 _Timing from 10 seconds to 5 minutes_
 
@@ -180,7 +181,7 @@ options:
 
 **First positional argument** `deg` :
 
-It's PATH to your Comma-separated file with full list of DEGs with required columns: id, log2FoldChange, padj ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). Similar table can be generated by DESeq2[^3] (https://bioconductor.org/packages/release/bioc/html/DESeq2.html) or IRIS[^4] (https://bmbls.bmi.osumc.edu/IRIS/).
+It is PATH to your comma-separated file (.csv) with full list of DEGs with required columns: id, log2FoldChange, padj ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). Similar table can be generated by DESeq2[^3] (https://bioconductor.org/packages/release/bioc/html/DESeq2.html) or IRIS[^4] (https://bmbls.bmi.osumc.edu/IRIS/).
 
 [Example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv):
 ```
@@ -194,15 +195,15 @@ ENSG00000001036,0.1,0.81968747
 ENSG00000001167,-0.2,0.444068007
 ENSG00000001460,-0.1,0.808782152
 ```
-**!IMPORTANT! You have to use the same gene IDs as those used in the preparation step for promoters**
+**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
 
 **Second positional argument** `matrices`:
 
-It's PATH to directory with motifs database prepared by `ESDEG.py preparation`
+It is PATH to directory with prepared database by `ESDEG.py preparation`
 
 **Third positional argument** `output`:
 
-Path to write result table.
+Output file in tab-separated format (.tsv) e.g. /path/to/output/file.tsv.
 
 
 #### Optional arguments description
@@ -213,27 +214,27 @@ Print help to STDOUT
 
 **Second optional argument** `-v; --visualization` :
 
-It's PATH to write HTML report (picture). Plotly is used for visualization.
+HTML output report contained graphical files (e.g. /path/to/file/with/graphics.html). Plotly is used for visualization.
 
 **Third optional argument** `-p; --parameter` :
 
-The value of `-p; --parameter ` could be  _enrichment_ or _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
+The value of `-p; --parameter ` can be  _enrichment_ or _fraction_. If you choose _enrichment_ option, statistics is calculated based on the number of predicted sites in promoters of DEGs. In this case the number of predicted sites in each promoter influence the result. If you choose _fraction_ option, statistics is calculated based on the number of DEGs with predicted sites. In this case the number of predicted sites in each promoter is not so important. The default value is _enrichment_.
 
 **Fourth optional argument** `-r; --regulated` :
 
-The argument `-r/--regulated` are used to choose type of DEGs in analysis. It could be `down` -> promoters of down regulated genes will be used in analysis; `up` -> promoters of up regulated genes will be used in analysis; `all` -> promoters of  up and down regulated genes will be used in analysis. The default value is _all_.
+The argument `-r/--regulated` are used to choose DEGs: `down` (promoters of down regulated genes), `up` (promoters of up regulated genes) and `all` (promoters of up and down regulated genes). The default value is _all_.
 
 **Fifth optional argument** `-p; --pvalue` :
 
-The argument  `-p; --pvalue ` is pvalue cutoff for DEGs choosing (DEGs <= pvalue). The default value is _0.05_.
+The argument  `-p; --pvalue ` is p-value threshold (_P_THR_) for DEGs selection (actual p-value of gene <= _P_THR_). The default value is _0.05_.
 
 **Sixth optional argument** `-l; --log2fc_deg` :
 
-The argument  `-l; --log2fc_deg ` is Log2FoldChange cutoff for DEGs choosing (DEGs >= Log2FoldChange OR DEGs <= -Log2FoldChange). The default value is _1_.
+The argument  `-l; --log2fc_deg ` is Log2FoldChange threshold (_L2FC_THR_) for DEGs selection (actual value of Log2FoldChange of gene >= _L2FC_THR_ OR actual Log2FoldChange of gene <= -_L2FC_THR_). The default value is _1_.
 
 **Seventh optional argument** `-l; --log2fc_back` :
 
-The argument  `-l; --log2fc_back ` is Log2FoldChange cutoff for background choosing (-Log2FoldChange <= BACKGROUND <= Log2FoldChange). The default value is _log2(5/4) = 0.376287495_.
+The argument  `-l; --log2fc_back ` is Log2FoldChange threshold for background (_L2FC_BACK_THR_) selection (-_L2FC_BACK_THR_ <= actual value of Log2FoldChange of gene <= _L2FC_BACK_THR_). The default value is _log2(5/4) = 0.376287495_.
 
 **Eighth optional argument** `-c; --content` :
 
@@ -242,7 +243,7 @@ The argument `-c; --content` is used to set threshold of GC content for generati
 
 ## SET case
 
-This command is used when you have set of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in a given set of genes (foreground) compared to a background. Background includes all genes from database except given as a foreground.
+This command is used when you have only set of genes from arbitrary source without any information related of expression of genes ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-GEOD-48230-query-results.csv)). This command allows you to detect which motifs are enriched in a given set of genes (foreground) compared to a background. In this case background includes all genes from database except given as a foreground.
 
 _Timing from 10 seconds to 5 minutes_
 
@@ -286,15 +287,15 @@ ENSG00000038427
 ENSG00000186480
 ...
 ```
-**!IMPORTANT! You have to use the same gene IDs as those used in the preparation step for promoters**
+**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
 
 **Second positional argument** `matrices`:
 
-It's PATH to directory with motifs database prepared by `ESDEG.py preparation`
+It is PATH to directory with prepared database by `ESDEG.py preparation`
 
 **Third positional argument** `output`:
 
-Path to write result table.
+Output file in tab-separated format (.tsv) e.g. /path/to/output/file.tsv.
 
 #### Optional arguments description
 
@@ -304,15 +305,15 @@ Print help to STDOUT
 
 **Second optional argument** `-v; --visualization` :
 
-It's PATH to write HTML report (picture). Plotly is used for visualization.
+HTML output report contained graphical files (e.g. /path/to/file/with/graphics.html). Plotly is used for visualization.
 
 **Third optional argument** `-p; --parameter` :
 
-Options for `-p; --parameter ` are  _enrichment_ and _fraction_. If you choose _enrichment_, statistics are calculated based on number of TFBS in DEGs promoters. In this case number of TFBS in each promoters may play role and influences the result. If you choose _fraction_, statistics are calculated based on number of DEGs with TFBS.  In this case number of TFBS in promoters doesn't matter. The default value is _enrichment_.
+The value of `-p; --parameter ` can be  _enrichment_ or _fraction_. If you choose _enrichment_ option, statistics is calculated based on the number of predicted sites in promoters of DEGs. In this case the number of predicted sites in each promoter influence the result. If you choose _fraction_ option, statistics is calculated based on the number of DEGs with predicted sites. In this case the number of predicted sites in each promoter is not so important. The default value is _enrichment_.
 
 **Fourth optional argument** `-c; --content` :
 
-The argument `-c; --content` is used to set threshold of GC content for generating background.\
+The argument `-c; --content` is used to set threshold of G/C content for generating background.\
 
 
 ## Example run
@@ -354,11 +355,11 @@ MA0069.1  PAX6  Paired box factors  -0.051719521  0.697035117 1 ENSG00000003402;
 Where:
 **motif_id** - jaspar id from data base.
 
-**tf_name** - name of Transcrition factor
+**tf_name** - name of Transcription factor
 
 **tf_class** - class of DBD's transcrition factor
 
-**log(or)** - it's -log2 transforamation of  odds ratio (OR). It could be defined as $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach (fraction approach). Also It could be defined as $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach (enrichment approach)
+**log(or)** - it's -log2 transforamation of  odds ratio (OR). For the option `fraction` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach. Alternatively for the option `enrichment` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach.
 
 **pval** - it's combined p-value culculated by Hartung method[^5].
 
@@ -396,6 +397,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+
+[^a]: Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269
+[^b]: Levitsky, V., Zemlyanskaya, E., Oshchepkov, D., Podkolodnaya, O., Ignatieva, E., Grosse, I., Mironova, V., & Merkulova, T. (2019). A single ChIP-seq dataset is sufficient for comprehensive analysis of motifs co-occurrence with MCOT package. Nucleic acids research, 47(21), e139. https://doi.org/10.1093/nar/gkz800
+[^c]: Tsukanov, A. V., Mironova, V. V., & Levitsky, V. G. (2022). Motif models proposing independent and interdependent impacts of nucleotides are related to high and low affinity transcription factor binding sites in Arabidopsis. Frontiers in plant science, 13, 938545. https://doi.org/10.3389/fpls.2022.938545
 [^1]: Castro-Mondragon, J. A., Riudavets-Puig, R., Rauluseviciute, I., Lemma, R. B., Turchi, L., Blanc-Mathieu, R., Lucas, J., Boddie, P., Khan, A., Manosalva Pérez, N., Fornes, O., Leung, T. Y., Aguirre, A., Hammal, F., Schmelter, D., Baranasic, D., Ballester, B., Sandelin, A., Lenhard, B., Vandepoele, K., … Mathelier, A. (2022). JASPAR 2022: the 9th release of the open-access database of transcription factor binding profiles. Nucleic acids research, 50(D1), D165–D173. https://doi.org/10.1093/nar/gkab1113
 [^2]: Quinlan, A. R., & Hall, I. M. (2010). BEDTools: a flexible suite of utilities for comparing genomic features. Bioinformatics (Oxford, England), 26(6), 841–842. https://doi.org/10.1093/bioinformatics/btq033
 [^3]: Love, M. I., Huber, W., & Anders, S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, *15*(12), 550. https://doi.org/10.1186/s13059-014-0550-8

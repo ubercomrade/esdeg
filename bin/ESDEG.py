@@ -19,12 +19,12 @@ def parse_args():
         help='Prepare database for respective JASPAR CORE taxonomic group of motifs. Possible options are plants, vertebrates, insects, urochordates, nematodes, fungi. \
         For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html')
     preparation_parser.add_argument('promoters', action='store', metavar='promoters',
-         help='Path to promoters in fasta format. All promoters have to be with same length. After ">" unique gene ID have to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
+         help='Path to promoters in fasta format. All promoters have to be with same length. After the symbol ">" unique gene ID has to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
     preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
 
-    deg_parser.add_argument('deg', action='store', help='TSV file with DEG with ..., The NAME column must contain ensemble gene IDS')
-    deg_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
-    deg_parser.add_argument('output', action='store', help='Path to write table with results')
+    deg_parser.add_argument('deg', action='store', help='Input file in CSV format with results of RNA-seq analysis. File must contain next columns: id, log2FoldChange, padj')
+    deg_parser.add_argument('matrices', action='store', help='Directory with prepared database contained .npy files (e.g. /path/to/database)')
+    deg_parser.add_argument('output', action='store', help='Output file in TSV format (e.g. /path/to/output/file.tsv)')
     deg_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
                             help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
@@ -35,9 +35,9 @@ def parse_args():
     deg_parser.add_argument('-P', '--pvalue', action='store', type=float, default=0.05,
                         help='The pvalue is used as threshold to choose DEGs, default= 0.05')
     deg_parser.add_argument('-l', '--log2fc_deg', action='store', type=float, default=1.,
-                        help='The absolute value of log2FoldChange used as threshold to choose DEGs promoters (DEGs >= thr OR DEGs <= -thr), default= 1.0')
+                        help='The absolute value of log2FoldChange used as threshold (L2FC_THR) to choose DEGs promoters (actual L2FC >= L2FC_THR OR actual L2FC <= -L2FC_THR), default= 1.0')
     deg_parser.add_argument('-L', '--log2fc_back', action='store', type=float, default=0.32192809488736235,
-                        help='The absolute value of log2FoldChange used as threshold to choose background promoters (-thr <= BACK <= thr), default= log2(5/4)=0.321928...')
+                        help='The absolute value of log2FoldChange used as threshold (L2FC_BACK_THR) to choose background promoters (-L2FC_BACK_THR <= actual L2FC <= L2FC_BACK_THR), default= log2(5/4)=0.321928...')
     deg_parser.add_argument('-c', '--content', action='store', type=float, default=0.3,
                         help='The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. \
                         Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. \
