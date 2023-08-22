@@ -2,7 +2,7 @@
 
 ## Introduction
 We developed tool ESDEG that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment. We applied this tool to perform analysis on promoters of the genes upregulated and downregulated in the brain tissue samples of tame rats [^a].
-To identify enriched motifs, we first performed motif recognition in the given set of promoter (upstream regions of the same length), utilizing each from a library of nucleotide frequency matrices taken from the [JASPAR](https://jaspar.uio.no/). Next, a table of recognition thresholds was compiled as described in works[^b][^c], where expected recognition rates (ERRs) for each threshold were calculated as probabilities of site prediction in the whole-genome dataset of promoters. Given that the enrichment of sites depends on a chosen threshold, subsequent calculations were performed for 30 recognition thresholds (equidistant on a logarithmic scale of ERRs) in the range of 5 × 10E−4 to 1 × 10E−4. Next, all promoters were categorized into either a foreground or background group. The foreground group contained the promoters of the significantly DEGs: either only upregulated or only downregulated or both upregulated and downregulated genes. The set parameters (adjusted p-value and log2(fold change)) were used to determine whether a gene was differentially expressed. The background group included the same number of promoters as the foreground group, but they were randomly selected from none-DEGs according to given parameters (adjusted p-value, log2(fold change) and G/C content) and have the same G/C content as foreground . Next, we calculated the frequency of a motif in each of the gene promoter groups. To estimate the significance of the motif enrichment, the Monte Carlo approach was applied. For a given motif and a recognition threshold, site frequency was calculated for the foreground group (AVFOR), whereas a background group was generated many times to estimate the site frequency distribution. Next, the average (AVBACK) and standard deviation (SDBACK) for the frequencies in the background group set were calculated. Then, a Z-score was calculated according to the formula (AVFOR − AVBACK)/SDBACK. This Z-score allowed us to compute the significance of enrichment (p-value) by fitting a site’s frequency distribution to a normal distribution. To confirm enrichment for a given motif, multiple p-values were combined, referring all recognition thresholds into a single unified p-value according to the Hartung method [^5]. Thus, a unified p-value was calculated for each motif. Finally, an adjusted p-value (padj) was calculated from the set of unified p-values for all motifs with the Benjamini–Hochberg correction for multiple comparisons; in this way, our analysis involved multiple simultaneous statistical tests for various motifs.
+To identify enriched motifs, we first performed motif recognition in the given set of promoter (upstream regions of the same length), utilizing each from a library of nucleotide frequency matrices taken from the [JASPAR](https://jaspar.uio.no/). Next, a table of recognition thresholds was compiled as described in works[^b][^c], where expected recognition rates (_ERRs_) for each threshold were calculated as probabilities of site prediction in the whole-genome dataset of promoters. Given that the enrichment of sites depends on a chosen threshold, subsequent calculations were performed for 30 recognition thresholds (equidistant on a logarithmic scale of _ERRs_) in the range of 5 × 10E−4 to 1 × 10E−4. Next, all promoters were categorized into either a foreground or background group. The foreground group contained the promoters of the significantly DEGs: either only upregulated or only downregulated or both upregulated and downregulated genes. The set parameters (_adjusted p-value_ and _log2(fold change)_) were used to determine whether a gene was differentially expressed. The background group included the same number of promoters as the foreground group, but they were randomly selected from none-DEGs according to given parameters (_adjusted p-value_, _log2(fold change)_ and _G/C content_) and have the same _G/C content_ as foreground. Next, we calculated the frequency of a motif in each of the gene promoter groups. To estimate the significance of the motif enrichment, the Monte Carlo approach was applied. For a given motif and a recognition threshold, site frequency was calculated for the foreground group (_AVFOR_), whereas a background group was generated many times to estimate the site frequency distribution. Next, the average (_AVBACK_) and standard deviation (_SDBACK_) for the frequencies in the background group set were calculated. Then, a _Z-score_ was calculated according to the formula _(AVFOR − AVBACK)/SDBACK_. This _Z-score_ allowed us to compute the significance of enrichment (_p-value_) by fitting a site’s frequency distribution to a normal distribution. To confirm enrichment for a given motif, multiple _p-values_ were combined, referring all recognition thresholds into a single unified _p-value_ according to the Hartung method [^5]. Thus, a unified _p-value_ was calculated for each motif. Finally, an adjusted p-value (_padj_) was calculated from the set of unified p-values for all motifs with the Benjamini–Hochberg correction for multiple comparisons; in this way, our analysis involved multiple simultaneous statistical tests for various motifs.
 
 * You can find more details in article _Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
 
@@ -136,15 +136,30 @@ This command is used when you have comma-separated table including results of di
 _Timing from 10 seconds to 5 minutes_
 
 ``````
+usage: ESDEG.py [-h] {preparation,deg,set} ...
+
+positional arguments:
+  {preparation,deg,set}
+                        Available commands:
+    preparation         Run data base preparation
+    deg                 Run test on DEGs
+    set                 Run test on SET of genes
+
+options:
+  -h, --help            show this help message and exit
+(base) anton@pop-os:~/Tools/esdeg-main$ ESDEG.py deg -h
 usage: ESDEG.py deg [-h] [-v VISUALIZATION] [-p PARAMETER] [-r N] [-P PVALUE]
                     [-l LOG2FC_DEG] [-L LOG2FC_BACK] [-c CONTENT]
                     deg matrices output
 
 positional arguments:
-  deg                   TSV file with DEG with ..., The NAME column must
-                        contain ensemble gene IDS
-  matrices              Path to prepared data base of matrices
-  output                Path to write table with results
+  deg                   Input file in CSV format with results of RNA-seq
+                        analysis. File must contain next columns: id,
+                        log2FoldChange, padj
+  matrices              Directory with prepared database contained .npy files
+                        (e.g. /path/to/database)
+  output                Output file in TSV format (e.g.
+                        /path/to/output/file.tsv)
 
 options:
   -h, --help            show this help message and exit
@@ -162,12 +177,13 @@ options:
                         default= 0.05
   -l LOG2FC_DEG, --log2fc_deg LOG2FC_DEG
                         The absolute value of log2FoldChange used as threshold
-                        to choose DEGs promoters (DEGs >= thr OR DEGs <=
-                        -thr), default= 1
+                        (L2FC_THR) to choose DEGs promoters (actual L2FC >=
+                        L2FC_THR OR actual L2FC <= -L2FC_THR), default= 1.0
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
                         The absolute value of log2FoldChange used as threshold
-                        to choose background promoters (-thr <= BACK <= thr),
-                        default= log2(5/4)=0.376287495
+                        (L2FC_BACK_THR) to choose background promoters
+                        (-L2FC_BACK_THR <= actual L2FC <= L2FC_BACK_THR),
+                        default= log2(5/4)=0.321928...
   -c CONTENT, --content CONTENT
                         The maximal GC content difference between promoters of
                         foreground and background in Monte Carlo algorithm.
@@ -195,7 +211,7 @@ ENSG00000001036,0.1,0.81968747
 ENSG00000001167,-0.2,0.444068007
 ENSG00000001460,-0.1,0.808782152
 ```
-**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
+$${\color{red}**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**}$$
 
 **Second positional argument** `matrices`:
 
@@ -287,7 +303,7 @@ ENSG00000038427
 ENSG00000186480
 ...
 ```
-**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**
+$${\color{red}**!IMPORTANT! You have to use the same type of gene IDs (ENSEMBL ID, NCBI Gene ID, HUGO Gene ID ...) as that used in the preparation step for promoters**}$$
 
 **Second positional argument** `matrices`:
 
