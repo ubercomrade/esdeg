@@ -1,4 +1,4 @@
-import os
+import sys
 import json
 import pandas as pd
 import numpy as np
@@ -24,7 +24,7 @@ def set_case(path_to_set, path_to_db,
     check_intersection = np.sum(np.in1d(foreground_ids, ids, assume_unique=True))
     if check_intersection == 0:
         print(f'There are no common IDs in the database with the DEG IDs. Maybe different identifiers are used. Exit.')
-        os.exit()
+        sys.exit()
     other_ids = get_other_gene_ids_for_set_case(foreground_ids, ids)
     print('-'*30)
 

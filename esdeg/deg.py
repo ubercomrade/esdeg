@@ -1,4 +1,4 @@
-import os
+import sys
 import json
 import pandas as pd
 import numpy as np
@@ -29,7 +29,7 @@ def deg_case(path_to_deg, path_to_db,
     check_intersection = np.sum(np.in1d(foreground_ids, ids, assume_unique=True))
     if check_intersection == 0:
         print(f'There are no common IDs in the database with the DEG IDs. Maybe different identifiers are used. Exit.')
-        os.exit()
+        sys.exit()
     other_ids = get_other_gene_ids_for_deg_case(deg_table, padj_thr=padj_thr, log2fc_thr=log2fc_thr_background)
     print('-'*30)
 
