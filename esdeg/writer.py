@@ -4,7 +4,8 @@ import pandas as pd
 
 
 def write_table(df, path_to_output):
-    df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
+    #df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
+    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log(or)', 'pval', 'adj.pval', 'genes_low_thr', 'genes_high_thr']]
     df = df.sort_values(by='adj.pval')
     df.to_csv(path_to_output, sep='\t', index=False)
     print('All done. Exit')

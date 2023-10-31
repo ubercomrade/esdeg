@@ -63,7 +63,6 @@ def deg_case(path_to_deg, path_to_db,
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
     df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
-    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log(or)', 'pval', 'adj.pval', 'genes_low_thr', 'genes_high_thr']]
 
     print('-'*30)
     return df
