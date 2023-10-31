@@ -26,6 +26,7 @@ setup(
     packages=['esdeg'],
     package_data={
         'esdeg': ['tomtom/*.tsv'],
+        'esdeg': ['clusters/*.tsv'],
     },
     scripts=['bin/ESDEG.py',],
     classifiers=[

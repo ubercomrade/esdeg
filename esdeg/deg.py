@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 from statsmodels.stats.multitest import multipletests
-from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids
+from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids, get_motif_to_cluster
 
 
 def deg_case(path_to_deg, path_to_db,
@@ -20,6 +20,9 @@ def deg_case(path_to_deg, path_to_db,
     file.close()
     gc_content = np.array(metadata['gc'])
     ids = np.array(metadata['ids'])
+    taxon = metadata['taxon']
+    cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
+    motif_to_cluster = get_motif_to_cluster(cluster_path)
     print('-'*30)
 
     print('Read DEG table')
@@ -58,5 +61,8 @@ def deg_case(path_to_deg, path_to_db,
     df = pd.DataFrame(results)
     _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
     df['adj.pval'] = adj_pval
+    df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
+    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log(or)', 'pval', 'adj.pval', 'genes_low_thr', 'genes_high_thr']]
+
     print('-'*30)
     return df

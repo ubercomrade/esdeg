@@ -24,6 +24,7 @@ def prepare_motif_db(output_dir, path_to_promoters, taxon):
 
     #metadata
     metadata = dict()
+    metadata['taxon'] = taxon
     metadata['ids'] = list(ids)
     metadata['gc'] = list(gc_content)
     metadata['motif_id'] = []

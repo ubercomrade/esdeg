@@ -44,10 +44,10 @@ def max_score(matrix):
 
 def to_score(matrix, norm_value):
     min_s = min_score(matrix)
-    max_s = max_score(matrix) 
+    max_s = max_score(matrix)
     score = norm_value * (max_s - min_s) + min_s
     return score
-    
+
 
 def jaspar_to_pwm(motif):
     pcm = motif.counts
@@ -55,7 +55,7 @@ def jaspar_to_pwm(motif):
     pfm = pcm_to_pfm(pcm)
     pwm = pfm_to_pwm(pfm)
     return pwm
-    
+
 
 # def calculate_gc(sequences):
 #     length = sequences.shape[1]
@@ -98,7 +98,7 @@ def get_threshold(scores):
             break
         elif score != last_score:
             container.append((last_score, count/number_of_sites))
-            last_score = score 
+            last_score = score
     return container
 
 
@@ -112,34 +112,39 @@ def calculate_fprs(min_fpr, n=3):
     return container
 
 
-def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter):    
+def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter):
     if parameter == "fraction":
         #from number of sites to number of peaks with site
         foreground = np.array(foreground >= 1, dtype=int)
         other = np.array(other >= 1, dtype=int)
-        
+
     #run montecarlo
-    z_scores, odds_ratio = montecarlo(foreground, foreground_gc, 
+    z_scores, odds_ratio = montecarlo(foreground, foreground_gc,
                                           other, other_gc, gc_threshold)
     #z_scores, odds_ratio = montecarlo(foreground, other)
-    
+
     #list of genes with site (thr 0.0005)
-    genes_with_bs = genes[np.greater_equal(foreground[:,1], 1)]
-    
+    genes_low_thr = genes[np.greater_equal(foreground[:,0], 1)]
+
+    #list of genes with site (thr 0.0001)
+    genes_high_thr = genes[np.greater_equal(foreground[:,-1], 1)]
+
+
     #calculate one -log10(p-value) from several p-values by using Hartung method
     pv = hartung(stats.norm.sf(z_scores))
     lpv = -np.log10(pv)
-    
+
     #calculate distance
 #     if np.log2(odds_ratio) > 0:
 #         distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
 #     else:
 #         distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
-        
+
     #write results
     results = {'log(or)': np.log2(odds_ratio),
                'pval': pv,
-               'genes': ';'.join(list(genes_with_bs))}
+               'genes_low_thr': ';'.join(list(genes_low_thr)),
+               'genes_high_thr': ';'.join(list(genes_high_thr))}
     return results
 
 
@@ -195,12 +200,12 @@ def hartung(p):
 
 
 def split_by_gene_ids(counts, gc, ids, foreground_ids, other_ids):
-    _, index, index_foreground = np.intersect1d(ids, foreground_ids, assume_unique=False, return_indices=True) 
+    _, index, index_foreground = np.intersect1d(ids, foreground_ids, assume_unique=False, return_indices=True)
     foreground_counts = counts[index]
     foreground_gc = gc[index]
     genes = ids[index]
-    
-    _, index, index_other = np.intersect1d(ids, other_ids, assume_unique=False, return_indices=True) 
+
+    _, index, index_other = np.intersect1d(ids, other_ids, assume_unique=False, return_indices=True)
     other_counts = counts[index]
     other_gc = gc[index]
     return foreground_counts, foreground_gc, other_counts, other_gc, genes
@@ -230,3 +235,14 @@ def get_other_gene_ids_for_deg_case(df, padj_thr=0.05, log2fc_thr=np.log2(5/4)):
 def get_other_gene_ids_for_set_case(set_ids, all_ids):
     gene_ids = set(list(all_ids)) - set(list(set_ids))
     return np.array(list(gene_ids))
+
+
+#Clusters
+def get_motif_to_cluster(cluster_path):
+    clusters = pd.read_csv(cluster_path, sep='\t')
+    motif_to_cluster = dict()
+    for index, line in clusters.iterrows():
+        cluster_id = line[0]
+        for motif_id in line['motif_ids'].split(','):
+            motif_to_cluster[motif_id] = cluster_id
+    return motif_to_cluster
