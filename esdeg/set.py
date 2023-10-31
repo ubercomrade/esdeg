@@ -1,5 +1,6 @@
 import sys
 import json
+import pkg_resources
 import pandas as pd
 import numpy as np
 from statsmodels.stats.multitest import multipletests
