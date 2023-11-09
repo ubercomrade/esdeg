@@ -61,7 +61,7 @@ def deg_case(path_to_deg, path_to_db,
     df = pd.DataFrame(results)
     lg_adj_pval = fdrcorrection_log(df['ln(pval)']) # natrual log
     df['adj.pval'] = np.exp(lg_adj_pval)
-    df['log10(pval)'] = df['log(pval)'] / np.log(10) # from loge to log10
+    df['log10(pval)'] = df['ln(pval)'] / np.log(10) # from loge to log10
     df['log10(adj.pval)'] = lg_adj_pval / np.log(10) # from loge to log10
     df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
