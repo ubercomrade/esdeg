@@ -3,8 +3,7 @@ import json
 import pkg_resources
 import pandas as pd
 import numpy as np
-from statsmodels.stats.multitest import multipletests
-from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids, get_motif_to_cluster
+from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids, get_motif_to_cluster, fdrcorrection_log
 
 
 def deg_case(path_to_deg, path_to_db,
@@ -60,8 +59,10 @@ def deg_case(path_to_deg, path_to_db,
         line.update(out)
         results.append(line)
     df = pd.DataFrame(results)
-    _, adj_pval, _, _ = multipletests(df['pval'], method='fdr_bh')
-    df['adj.pval'] = adj_pval
+    lg_adj_pval = fdrcorrection_log(df['ln(pval)']) # natrual log
+    df['adj.pval'] = np.exp(lg_adj_pval)
+    df['log10(pval)'] = df['log(pval)'] / np.log(10) # from loge to log10
+    df['log10(adj.pval)'] = lg_adj_pval / np.log(10) # from loge to log10
     df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
     print('-'*30)

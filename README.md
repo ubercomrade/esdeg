@@ -23,12 +23,11 @@ these Python packages via ``pip``:
   * scipy
   * pythran
   * pandas
-  * statsmodels
   * biopython
   * pyjaspar
 
 ```
-pip install numpy, scipy, plotly, statsmodels, pythran, pandas, biopython, pyjaspar
+pip install numpy, scipy, plotly, pythran, pandas, biopython, pyjaspar
 ```
 
 ## Installation
@@ -379,11 +378,15 @@ Where:
 
 **log(or)** - it's -log2 transforamation of  odds ratio (OR). For the option `fraction` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach. Alternatively for the option `enrichment` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach.
 
-**pval** - it's combined p-value culculated by Hartung method[^5].
+**log10(pval)** - it's log10(combined p-value). Combined p-value is culculated by Hartung method[^5].
 
-**adj.pval** - adjasted p-value by Benjamini-Hochberg FDR correction. `statsmodels` is used to apply this correction.
+**log10(adj.pval)** - it's log10(adjasted p-value) obtained by using Benjamini-Hochberg FDR correction.
 
-**genes** - list of genes with predicted sites (threshold(ERR) = 0.0005).
+**adj.pval** - it's adjasted p-value obtained by using Benjamini-Hochberg FDR correction.
+
+**genes_low_thr** - list of genes with predicted sites (threshold(ERR) = 0.0005).
+
+**genes_high_thr** - list of genes with predicted sites (threshold(ERR) = 0.0001).
 
 ## Results visualization
 

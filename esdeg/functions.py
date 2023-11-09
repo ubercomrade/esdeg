@@ -130,19 +130,20 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
     genes_high_thr = genes[np.greater_equal(foreground[:,-1], 1)]
 
 
-    #calculate one -log10(p-value) from several p-values by using Hartung method
-    pv = hartung(stats.norm.sf(z_scores))
-    lpv = -np.log10(pv)
+    #calculate one ln(p-value) from several p-values by using Hartung method
+    #pv = hartung(stats.norm.sf(z_scores)) # old. work with p-values
+    lpv = hartung_log(z_scores) # new. work with ln(p-values)
+    #lpv = -np.log10(pv)
 
-    #calculate distance
+#    #calculate distance
 #     if np.log2(odds_ratio) > 0:
 #         distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
 #     else:
 #         distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
 
     #write results
-    results = {'log(or)': np.log2(odds_ratio),
-               'pval': pv,
+    results = {'log2(or)': np.log2(odds_ratio),
+               'ln(pval)': lpv,
                'genes_low_thr': ';'.join(list(genes_low_thr)),
                'genes_high_thr': ';'.join(list(genes_high_thr))}
     return results
@@ -181,24 +182,79 @@ def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
 #     return z_score, np.mean(real / np.mean(random, axis=0))
 
 
-def hartung(p):
+# def hartung(p):
+#     '''
+#      Hartung, J. (1999): "A note on combining dependent tests of significance",
+#                          Biometrical Journal, 41(7), 849--855.
+#     '''
+#     L = np.ones(len(p), dtype=float) # zeros weight
+#     t = norm.ppf(p)
+#     n = float(len(p))
+#     avt = np.sum(t)/n
+#     q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
+#     rhohat = 1 - q
+#     rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
+#     kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
+#     Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
+#     pvalue=norm.cdf(Ht)
+#     return pvalue
+
+
+def hartung_log(z_scores):
     '''
      Hartung, J. (1999): "A note on combining dependent tests of significance",
                          Biometrical Journal, 41(7), 849--855.
     '''
-    L = np.ones(len(p), dtype=float) # zeros weight
-    t = norm.ppf(p)
-    n = float(len(p))
+    L = np.ones(len(z_scores), dtype=np.longfloat) # zeros weight
+    t = -1 * z_scores
+    n = float(len(z_scores))
     avt = np.sum(t)/n
     q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
     rhohat = 1 - q
     rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
     kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
     Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
-    pvalue=norm.cdf(Ht)
-    return pvalue
+    print(Ht)
+    log_pvalue=norm.logcdf(Ht)
+    return log_pvalue
+
+#calculate adj.pvalues.
+# def fdr(p_vals):
+#     ranked_p_values = stats.rankdata(p_vals)
+#     fdr = p_vals * len(p_vals) / ranked_p_values
+#     fdr[fdr > 1] = 1
+#     return fdr
+#
+# def fdr_log(lg_pvals):
+#     ranked_p_values = stats.rankdata(lg_pvals)
+#     fdr = lg_pvals + np.log(len(lg_pvals)) - np.log(ranked_p_values)
+#     fdr[fdr > 0] = 0
+#     return fdr
 
 
+#calculate adj.pvalues. Based on function statsmodels.stats.multitest.fdrcorrection from statsmodels
+def _ecdf_log(x):
+    nobs = len(x)
+    return np.log(np.arange(1,nobs+1)) - np.log(nobs)
+
+def fdrcorrection_log(lg_pvals):
+    pvals = np.asarray(lg_pvals)
+    lg_pvals_sortind = np.argsort(lg_pvals)
+    lg_pvals_sorted = np.take(pvals, lg_pvals_sortind)
+
+    ecdffactor = _ecdf_log(lg_pvals_sorted)
+
+    lg_pvals_corrected_raw = lg_pvals_sorted - ecdffactor
+    lg_pvals_corrected = np.minimum.accumulate(lg_pvals_corrected_raw[::-1])[::-1]
+    del lg_pvals_corrected_raw
+    lg_pvals_corrected[lg_pvals_corrected > 0] = 0
+    lg_pvals_corrected_ = np.empty_like(lg_pvals_corrected)
+    lg_pvals_corrected_[lg_pvals_sortind] = lg_pvals_corrected
+    del lg_pvals_corrected
+    return lg_pvals_corrected_
+
+
+#work_with genes
 def split_by_gene_ids(counts, gc, ids, foreground_ids, other_ids):
     _, index, index_foreground = np.intersect1d(ids, foreground_ids, assume_unique=False, return_indices=True)
     foreground_counts = counts[index]
@@ -237,7 +293,7 @@ def get_other_gene_ids_for_set_case(set_ids, all_ids):
     return np.array(list(gene_ids))
 
 
-#Clusters
+#clusters
 def get_motif_to_cluster(cluster_path):
     clusters = pd.read_csv(cluster_path, sep='\t')
     motif_to_cluster = dict()
