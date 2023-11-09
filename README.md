@@ -359,7 +359,7 @@ ESDEG generates output file in tsv format.
 Here is example of file:
 
 | motif_id | tf_name | tf_class | jaspar_cluster | log2(or) | log10(pval) | log10(adj.pval) | adj.pval | genes_low_thr | genes_high_thr |
-| --- | --- |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | MA0680.2 | Pax7 | Paired box factors | cluster_41 | 0.354260746038436 | -56.5585489729083 | -53.6399944423581 | 2.29089696905926E-54 | ENSG00000000971;ENSG00000008311;ENSG00000009694;... | ENSG00000009694;ENSG00000019549;ENSG00000078018;... |
 
 
