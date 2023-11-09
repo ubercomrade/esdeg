@@ -15,7 +15,7 @@ def write_table(df, path_to_output):
 def create_picture(df, path_to_output):
     df['-log10(adj.pval)'] = -df['log10(adj.pval)']
     df = df[df['adj.pval'] < 0.05]
-    fig = px.scatter(df, y="log(or)", x="-log10(adj.pval)", color="tf_class", symbol="tf_name",
+    fig = px.scatter(df, y="log2(or)", x="-log10(adj.pval)", color="tf_class", symbol="tf_name",
                     range_x=[0, np.max(df["-log10(adj.pval)"]) + 1],
                     range_y=[0, np.max(df["log2(or)"]) + .02])
     fig.add_vline(x=-np.log10(0.05), line_width=2.5, line_dash="dash", line_color="green",
