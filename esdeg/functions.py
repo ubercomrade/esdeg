@@ -205,7 +205,7 @@ def hartung_log(z_scores):
      Hartung, J. (1999): "A note on combining dependent tests of significance",
                          Biometrical Journal, 41(7), 849--855.
     '''
-    L = np.ones(len(z_scores), dtype=np.longfloat) # zeros weight
+    L = np.ones(len(z_scores)) # zeros weight
     t = -1 * z_scores
     n = float(len(z_scores))
     avt = np.sum(t)/n
@@ -214,7 +214,6 @@ def hartung_log(z_scores):
     rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
     kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
     Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
-    print(Ht)
     log_pvalue=norm.logcdf(Ht)
     return log_pvalue
 
