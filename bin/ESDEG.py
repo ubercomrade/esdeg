@@ -5,7 +5,7 @@ import pkg_resources
 from esdeg.set import set_case
 from esdeg.deg import deg_case
 from esdeg.preparation import prepare_motif_db
-from esdeg.writer import write_table, create_picture
+from esdeg.writer import write_table, write_xlsx, write_report, create_picture
 
 
 def parse_args():
