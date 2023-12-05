@@ -124,7 +124,8 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
                                        gc_threshold)
     z_scores = -1.0 * z_scores # for `one sided` and `greater`
     log_pvalues=norm.logcdf(z_scores) # natural log
-    log_pvalue = bonferroni_combined_log_pvalues(log_pvalues, number_of_uniq_fprs)
+    #log_pvalue = bonferroni_combined_log_pvalues(log_pvalues, number_of_uniq_fprs)
+    log_pvalue = hartung_log(z_scores)
     index_of_best = np.argmin(log_pvalues)
 
     genes_best = genes[np.greater_equal(foreground[:,index_of_best], 1)]
@@ -213,7 +214,7 @@ def bonferroni_combined_pvalues(pvals, number_of_uniq_fprs):
     return np.min([1.0, np.min(pvals) * number_of_uniq_fprs])
 
 def bonferroni_combined_log_pvalues(log_pvals, number_of_uniq_fprs):
-    return np.min([0.0, np.min(log_pvals) * number_of_uniq_fprs])
+    return np.min([0.0, np.min(log_pvals) + np.log(number_of_uniq_fprs)])
 
 # def hartung(p):
 #     '''
@@ -232,22 +233,22 @@ def bonferroni_combined_log_pvalues(log_pvals, number_of_uniq_fprs):
 #     pvalue=norm.cdf(Ht)
 #     return pvalue
 
-# def hartung_log(z_scores):
-#     '''
-#      Hartung, J. (1999): "A note on combining dependent tests of significance",
-#                          Biometrical Journal, 41(7), 849--855.
-#     '''
-#     L = np.ones(len(z_scores)) # zeros weight
-#     t = -1 * z_scores
-#     n = float(len(z_scores))
-#     avt = np.sum(t)/n
-#     q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
-#     rhohat = 1 - q
-#     rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
-#     kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
-#     Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
-#     log_pvalue=norm.logcdf(Ht)
-#     return log_pvalue
+def hartung_log(z_scores):
+    '''
+     Hartung, J. (1999): "A note on combining dependent tests of significance",
+                         Biometrical Journal, 41(7), 849--855.
+    '''
+    L = np.ones(len(z_scores)) # zeros weight
+    n = float(len(z_scores))
+    avt = np.sum(z_scores)/n
+    q = np.sum((z_scores - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
+    rhohat = 1 - q
+    rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
+    #kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
+    kappa = 0.2
+    combined_z_score = np.sum(L*z_scores)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n+1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
+    log_pvalue = norm.logcdf(combined_z_score)
+    return log_pvalue
 
 #calculate adj.pvalues.
 # def fdr(p_vals):
