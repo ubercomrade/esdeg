@@ -93,7 +93,7 @@ def get_threshold(scores):
     for count, score in enumerate(scores[1:], 1):
         if score == last_score:
             continue
-        elif count/number_of_sites > 0.0005:
+        elif count/number_of_sites > 0.001:
             container.append((last_score, count/number_of_sites))
             break
         elif score != last_score:
@@ -102,14 +102,14 @@ def get_threshold(scores):
     return container
 
 
-def calculate_fprs(min_fpr, n=3):
-    container = []
-    step = (np.log10(np.min(min_fpr)) - np.log10(0.0005)) / n
-    for i in range(n):
-        fpr = 10**(np.log10(0.0005) + (i*step))
-        container.append(fpr)
-    container.append(min_fpr)
-    return container
+# def calculate_fprs(min_fpr, n=3):
+#     container = []
+#     step = (np.log10(np.min(min_fpr)) - np.log10(0.0005)) / n
+#     for i in range(n):
+#         fpr = 10**(np.log10(0.0005) + (i*step))
+#         container.append(fpr)
+#     container.append(min_fpr)
+#     return container
 
 
 def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter, number_of_uniq_fprs):
