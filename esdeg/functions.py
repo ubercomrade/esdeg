@@ -124,8 +124,8 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
                                        gc_threshold)
     z_scores = -1.0 * z_scores # for `one sided` and `greater`
     log_pvalues=norm.logcdf(z_scores) # natural log
-    #log_pvalue = bonferroni_combined_log_pvalues(log_pvalues, number_of_uniq_fprs)
-    log_pvalue = hartung_log(z_scores)
+    log_pvalue = bonferroni_combined_log_pvalues(log_pvalues, number_of_uniq_fprs)
+    #log_pvalue = hartung_log(z_scores)
     index_of_best = np.argmin(log_pvalues)
 
     genes_best = genes[np.greater_equal(foreground[:,index_of_best], 1)]
