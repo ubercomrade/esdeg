@@ -26,7 +26,11 @@ def parse_args():
     deg_parser.add_argument('matrices', action='store', help='Directory with prepared database contained .npy files (e.g. /path/to/database)')
     deg_parser.add_argument('output', action='store', help='Output file in TSV format (e.g. /path/to/output/file.tsv)')
     deg_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
-                            help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
+                            help="Path to write interactive picture in HTML format (path/to/pic.html). if '-v' is given, then ESDEG creates picutre. By default it isn't used")
+    deg_parser.add_argument('-x', '--xlsx', action='store', type=str, default='None',
+                            help="Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if '-x' is given, then ESDEG creates XSLX table. By default it isn't used")
+    deg_parser.add_argument('-R', '--report', action='store', type=str, default='None',
+                            help="Path to write interactive table with results in HTML format (path/to/report.html). HTML report contains logo of motifs. if '-r' is given, then ESDEG creates HTML report. By default it isn't used")
     deg_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment',
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
@@ -47,7 +51,11 @@ def parse_args():
     set_parser.add_argument('matrices', action='store', help='Path to prepared data base of matrices')
     set_parser.add_argument('output', action='store', help='Path to write table with results')
     set_parser.add_argument('-v', '--visualization', action='store', type=str, default='None',
-                            help="Path to write interactive picture in HTML format (path/to/pic.html). if '--v' is given, then ESDEG creates picutre. By default it isn't used")
+                            help="Path to write interactive picture in HTML format (path/to/pic.html). if '-v' is given, then ESDEG creates picutre. By default it isn't used")
+    set_parser.add_argument('-x', '--xlsx', action='store', type=str, default='None',
+                            help="Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if '-x' is given, then ESDEG creates XSLX table. By default it isn't used")
+    set_parser.add_argument('-R', '--report', action='store', type=str, default='None',
+                            help="Path to write interactive table with results in HTML format (path/to/report.html). HTML report contains logo of motifs. if '-r' is given, then ESDEG creates HTML report. By default it isn't used")
     set_parser.add_argument('-p', '--parameter', action='store', choices=['enrichment', 'fraction'],
                         metavar='PARAMETER', type=str, default='enrichment',
                         help='Parameter estimated in test (enrichment or fraction), default= enrichment')
@@ -69,6 +77,7 @@ def main():
         path_to_db = args.matrices
         path_to_output = args.output
         path_to_vis = args.visualization
+        path_to_xlsx = args.xlsx
         parameter = args.parameter
         condition = args.regulated
         padj_thr= args.pvalue
@@ -76,7 +85,7 @@ def main():
         log2fc_thr_background = args.log2fc_back
         gc_threshold = args.content
 
-        df = deg_case(path_to_deg,
+        df, taxon = deg_case(path_to_deg,
                  path_to_db,
                  parameter=parameter,
                  padj_thr=padj_thr,
@@ -86,6 +95,8 @@ def main():
                  condition=condition)
         if path_to_vis != 'None':
             create_picture(df, path_to_vis)
+        if path_to_report != 'None':
+            write_report(df, taxon, path_to_report)
         write_table(df, path_to_output)
 
     elif args.subparser_name == 'set':
@@ -96,12 +107,16 @@ def main():
         parameter = args.parameter
         gc_threshold = args.content
 
-        df = set_case(path_to_set,
+        df, taxon = set_case(path_to_set,
                  path_to_db,
                  parameter=parameter,
                  gc_threshold=gc_threshold)
         if path_to_vis != 'None':
             create_picture(df, path_to_vis)
+        if path_to_report != 'None':
+            write_report(df, taxon, path_to_report)
+        if path_to_xlsx != 'None':
+            write_xlsx(df, taxon, path_to_xlsx)
         write_table(df, path_to_output)
 
     elif args.subparser_name == 'preparation':

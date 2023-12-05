@@ -112,41 +112,65 @@ def calculate_fprs(min_fpr, n=3):
     return container
 
 
-def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter):
+def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter, number_of_uniq_fprs):
     if parameter == "fraction":
         #from number of sites to number of peaks with site
         foreground = np.array(foreground >= 1, dtype=int)
         other = np.array(other >= 1, dtype=int)
 
     #run montecarlo
-    z_scores, odds_ratio = montecarlo(foreground, foreground_gc,
-                                          other, other_gc, gc_threshold)
-    #z_scores, odds_ratio = montecarlo(foreground, other)
+    z_scores, odds_ratios = montecarlo(foreground, foreground_gc,
+                                       other, other_gc,
+                                       gc_threshold)
+    log_pvalues=norm.logcdf(z_scores) # natural log
+    log_pvalue = bonferroni_combined_log_pvalues(log_pvals, number_of_uniq_fprs)
+    index_of_best = numpy.argmin(log_pvalues)
 
-    #list of genes with site (thr 0.0005)
-    genes_low_thr = genes[np.greater_equal(foreground[:,0], 1)]
-
-    #list of genes with site (thr 0.0001)
-    genes_high_thr = genes[np.greater_equal(foreground[:,-1], 1)]
-
-
-    #calculate one ln(p-value) from several p-values by using Hartung method
-    #pv = hartung(stats.norm.sf(z_scores)) # old. work with p-values
-    lpv = hartung_log(z_scores) # new. work with ln(p-values)
-    #lpv = -np.log10(pv)
-
-#    #calculate distance
-#     if np.log2(odds_ratio) > 0:
-#         distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
-#     else:
-#         distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
+    genes_best = genes[np.greater_equal(foreground[:,index_of_best], 1)]
+    odds_ratio_best = odds_ratios[index_of_best]
 
     #write results
-    results = {'log2(or)': np.log2(odds_ratio),
-               'ln(pval)': lpv,
-               'genes_low_thr': ';'.join(list(genes_low_thr)),
-               'genes_high_thr': ';'.join(list(genes_high_thr))}
-    return results
+    results = {'log2(or)': np.log2(np.max(odds_ratios)),
+               'ln(pval)': log_pvalue,
+               'genes': ';'.join(list(genes_best))}
+    return results, pvals, odds_ratios, index_of_best
+
+
+# def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter):
+#     if parameter == "fraction":
+#         #from number of sites to number of peaks with site
+#         foreground = np.array(foreground >= 1, dtype=int)
+#         other = np.array(other >= 1, dtype=int)
+#
+#     #run montecarlo
+#     z_scores, odds_ratio = montecarlo(foreground, foreground_gc,
+#                                           other, other_gc, gc_threshold)
+#     #z_scores, odds_ratio = montecarlo(foreground, other)
+#
+#     #list of genes with site (thr 0.0005)
+#     genes_low_thr = genes[np.greater_equal(foreground[:,0], 1)]
+#
+#     #list of genes with site (thr 0.0001)
+#     genes_high_thr = genes[np.greater_equal(foreground[:,-1], 1)]
+#
+#
+#     #calculate one ln(p-value) from several p-values by using Hartung method
+#     #pv = hartung(stats.norm.sf(z_scores)) # old. work with p-values
+#     lpv = hartung_log(z_scores) # new. work with ln(p-values)
+#     #lpv = -np.log10(pv)
+#
+# #    #calculate distance
+# #     if np.log2(odds_ratio) > 0:
+# #         distance = np.sqrt(np.power(odds_ratio, 2) + np.power(lpv, 2))
+# #     else:
+# #         distance = -np.sqrt(np.power(1 / odds_ratio, 2) + np.power(lpv, 2))
+#
+#     #write results
+#     results = {'log2(or)': np.log2(odds_ratio),
+#                'ln(pval)': lpv,
+#                'genes_low_thr': ';'.join(list(genes_low_thr)),
+#                'genes_high_thr': ';'.join(list(genes_high_thr))}
+#     return results
 
 
 def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
@@ -154,18 +178,19 @@ def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
     number_of_other = other.shape[0]
     gc_index = np.abs([other_gc - i for i in foreground_gc])
     gc_index = gc_index < gc_threshold
-    indexes = np.zeros((number_of_foreground, 1000), dtype=np.int64)
+    number_of_iterations = 1000
+    indexes = np.zeros((number_of_foreground, number_of_iterations), dtype=np.int64)
     for i in range(number_of_foreground):
-        indexes[i] = np.random.choice(gc_index[i].nonzero()[0], 1000)
-    random = np.zeros((1000, number_of_thresholds), dtype=np.int64)
+        indexes[i] = np.random.choice(gc_index[i].nonzero()[0], number_of_iterations)
+    random = np.zeros((number_of_iterations, number_of_thresholds), dtype=np.int64)
     real = np.sum(foreground, axis=0)
-    for i in range(1000):
+    for i in range(number_of_iterations):
         index = indexes[:,i]
         sample = other[index]
         random[i] = np.sum(sample, axis=0)
     random_mean, random_std = np.mean(random, axis=0), np.std(random, axis=0)
     z_score = (real - random_mean) / random_std
-    return z_score, np.mean(real / np.mean(random, axis=0))
+    return z_score, real / random_mean
 
 
 # def montecarlo(foreground, other):
@@ -181,6 +206,13 @@ def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
 #     z_score = np.abs((real - random_mean) / random_std)
 #     return z_score, np.mean(real / np.mean(random, axis=0))
 
+
+#COMBINED PVALUES
+def bonferroni_combined_pvalues(pvals, number_of_uniq_fprs):
+    return np.min([1.0, np.min(pvals) * number_of_uniq_fprs])
+
+def bonferroni_combined_log_pvalues(log_pvals, number_of_uniq_fprs):
+    return np.min([0.0, np.min(log_pvals) * number_of_uniq_fprs])
 
 # def hartung(p):
 #     '''
@@ -199,23 +231,22 @@ def montecarlo(foreground, foreground_gc, other, other_gc, gc_threshold):
 #     pvalue=norm.cdf(Ht)
 #     return pvalue
 
-
-def hartung_log(z_scores):
-    '''
-     Hartung, J. (1999): "A note on combining dependent tests of significance",
-                         Biometrical Journal, 41(7), 849--855.
-    '''
-    L = np.ones(len(z_scores)) # zeros weight
-    t = -1 * z_scores
-    n = float(len(z_scores))
-    avt = np.sum(t)/n
-    q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
-    rhohat = 1 - q
-    rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
-    kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
-    Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
-    log_pvalue=norm.logcdf(Ht)
-    return log_pvalue
+# def hartung_log(z_scores):
+#     '''
+#      Hartung, J. (1999): "A note on combining dependent tests of significance",
+#                          Biometrical Journal, 41(7), 849--855.
+#     '''
+#     L = np.ones(len(z_scores)) # zeros weight
+#     t = -1 * z_scores
+#     n = float(len(z_scores))
+#     avt = np.sum(t)/n
+#     q = np.sum((t - avt)**2)/(n-1)  # Hartung, eqn. (2.2)
+#     rhohat = 1 - q
+#     rhostar = max(-1/(n-1), rhohat) # Hartung, p. 851
+#     kappa = (1 + 1/(n-1) - rhostar)/10 # Hartung, p. 853
+#     Ht = np.sum(L*t)/np.sqrt(np.sum(L**2)+((np.sum(L))**2-np.sum(L**2))*(rhostar+kappa*np.sqrt(2/(n-1))*(1-rhostar))) # Hartung, p. 854, eq 2.4
+#     log_pvalue=norm.logcdf(Ht)
+#     return log_pvalue
 
 #calculate adj.pvalues.
 # def fdr(p_vals):

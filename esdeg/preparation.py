@@ -38,8 +38,8 @@ def prepare_motif_db(output_dir, path_to_promoters, taxon):
     #urochordates
     #nematodes
     #fungi
-    jdb_obj = jaspardb(release='JASPAR2022')
-    motifs = jdb_obj.fetch_motifs(collection = 'CORE',tax_group = [taxon], min_length=8)
+    jdb_obj = jaspardb(release='JASPAR2024')
+    motifs = jdb_obj.fetch_motifs(collection = 'CORE',tax_group = [taxon], min_length=6)
     number_of_motifs = len(motifs)
     print(f'Number of matrices = {number_of_motifs}')
     print('-'*30)
@@ -68,10 +68,16 @@ def prepare_motif_db(output_dir, path_to_promoters, taxon):
         threshold_table = get_threshold(flatten_scores)
         threshold_table = np.array(threshold_table)
         fprs_table = threshold_table[:,1]
-        fprs_choosen = np.power(10, np.linspace(np.log10(5e-4), np.log10(1e-4), num=30))
+        fprs_choosen = np.power(10, np.linspace(np.log10(5e-5), np.log10(1e-3), num=20))
         indexes = np.searchsorted(fprs_table, fprs_choosen)
         threshold_table = threshold_table[indexes]
+        actual_fprs = threshold_table[:,1]
+        number_of_uniq_fprs = len(np.unique(actual_fprs))
         counts = sup.count_sites(scores, threshold_table)
+        metadata[motif_id] = {
+            'number_of_uniq_fprs': number_of_uniq_fprs
+        }
+
         np.save(f'{output_dir}/{motif_id}.npy', counts)
     with open(f'{output_dir}/metadata.json', 'w') as file:
         json.dump(metadata, file)

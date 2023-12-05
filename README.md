@@ -2,7 +2,7 @@
 
 ## Introduction
 We developed tool ESDEG that estimates the enrichment of motifs respecting transcription factor binding sites (TFBS) in promoters of differentially expressed genes (DEGs) derived from RNA-seq experiment. We applied this tool to perform analysis on promoters of the genes upregulated and downregulated in the brain tissue samples of tame rats [^a].
-To identify enriched motifs, we first performed motif recognition in the given set of promoter (upstream regions of the same length), utilizing each from a library of nucleotide frequency matrices taken from the [JASPAR](https://jaspar.uio.no/). Next, a table of recognition thresholds was compiled as described in works[^b][^c], where expected recognition rates (_ERRs_) for each threshold were calculated as probabilities of site prediction in the whole-genome dataset of promoters. Given that the enrichment of sites depends on a chosen threshold, subsequent calculations were performed for 30 recognition thresholds (equidistant on a logarithmic scale of _ERRs_) in the range of 5E−4 to 1E−4. Next, all promoters were categorized into either a foreground or background group. The foreground group contained the promoters of the significantly DEGs: either only upregulated or only downregulated or both upregulated and downregulated genes. The parameters (_adjusted p-value_ and _log2(fold change)_) were used to determine whether a gene was differentially expressed. DEGs are defined as follows: adjusted _p-value_ < 0.05 and |_log2(fold change)_| > 1. The background group included the same number of promoters as the foreground group, but they were randomly selected from none-DEGs according to given parameters (_adjusted p-value_, _log2(fold change)_ and _G/C content_) and have the same _G/C content_ as foreground. non-DEGs are defined as follows: _adjusted p-value_ > 0.05 and |_log2(fold change)_| <  _log2(5/4)_. Next, we calculated the frequency of a motif in each of the gene promoter groups. To estimate the significance of the motif enrichment, the Monte Carlo approach was applied. For a given motif and a recognition threshold, site frequency was calculated for the foreground group (_AVFOR_), whereas a background group was generated many times to estimate the site frequency distribution. Next, the average (_AVBACK_) and standard deviation (_SDBACK_) for the frequencies in the background group set were calculated. Then, a _Z-score_ was calculated according to the formula _(AVFOR − AVBACK)/SDBACK_. This _Z-score_ allowed us to compute the significance of enrichment (_p-value_) by fitting a site’s frequency distribution to a normal distribution. To confirm enrichment for a given motif, multiple _p-values_ were combined, referring all recognition thresholds into a single unified _p-value_ according to the Hartung method [^5]. Thus, a unified _p-value_ was calculated for each motif. Finally, an adjusted p-value (_padj_) was calculated from the set of unified p-values for all motifs with the Benjamini–Hochberg correction for multiple comparisons; in this way, our analysis involved multiple simultaneous statistical tests for various motifs.
+To identify enriched motifs, we first performed motif recognition in the given set of promoter (upstream regions of the same length), utilizing each from a library of nucleotide frequency matrices taken from the [JASPAR](https://jaspar.elixir.no/). Next, a table of recognition thresholds was compiled as described in works[^b][^c], where expected recognition rates (_ERRs_) for each threshold were calculated as probabilities of site prediction in the whole-genome dataset of promoters. Given that the enrichment of sites depends on a chosen threshold, subsequent calculations were performed for 20 recognition thresholds (equidistant on a logarithmic scale of _ERRs_) in the range of 5E−5 to 1E−3. Next, all promoters were categorized into either a foreground or background group. The foreground group contained the promoters of the significantly DEGs: either only upregulated or only downregulated or both upregulated and downregulated genes. The parameters (_adjusted p-value_ and _log2(fold change)_) were used to determine whether a gene was differentially expressed. DEGs are defined as follows: adjusted _p-value_ < 0.05 and |_log2(fold change)_| > 1. The background group included the same number of promoters as the foreground group, but they were randomly selected from none-DEGs according to given parameters (_adjusted p-value_, _log2(fold change)_ and _G/C content_) and have the same _G/C content_ as foreground. non-DEGs are defined as follows: _adjusted p-value_ > 0.05 and |_log2(fold change)_| <  _log2(5/4)_. Next, we calculated the frequency of a motif in each of the gene promoter groups. To estimate the significance of the motif enrichment, the Monte Carlo approach was applied. For a given motif and a recognition threshold, site frequency was calculated for the foreground group (_AVFOR_), whereas a background group was generated many times to estimate the site frequency distribution. Next, the average (_AVBACK_) and standard deviation (_SDBACK_) for the frequencies in the background group set were calculated. Then, a _Z-score_ was calculated according to the formula _(AVFOR − AVBACK)/SDBACK_. This _Z-score_ allowed us to compute the significance of enrichment (_p-value_) by fitting a site’s frequency distribution to a normal distribution. To confirm enrichment for a given motif, multiple _p-values_ were combined, referring all recognition thresholds into a single unified _p-value_ according to the Bonferroni method [^5]. Thus, a unified _p-value_ was calculated for each motif. Finally, an adjusted p-value (_padj_) was calculated from the set of unified p-values for all motifs with the Benjamini–Hochberg correction for multiple comparisons; in this way, our analysis involved multiple simultaneous statistical tests for various motifs.
 
 * You can find more details in article _Oshchepkov, Dmitry, Irina Chadaeva, Rimma Kozhemyakina, Svetlana Shikhevich, Ekaterina Sharypova, Ludmila Savinkova, Natalya V. Klimova, Anton Tsukanov, Victor G. Levitsky, and Arcady L. Markel. 2022. "Transcription Factors as Important Regulators of Changes in Behavior through Domestication of Gray Rats: Quantitative Data from RNA Sequencing" International Journal of Molecular Sciences 23, no. 20: 12269. https://doi.org/10.3390/ijms232012269_
 
@@ -25,9 +25,10 @@ these Python packages via ``pip``:
   * pandas
   * biopython
   * pyjaspar
+  * xlsxwriter
 
 ```
-pip install numpy, scipy, plotly, pythran, pandas, biopython, pyjaspar
+pip install numpy, scipy, plotly, pythran, pandas, biopython, pyjaspar, xlsxwriter
 ```
 
 ## Installation
@@ -58,7 +59,7 @@ options:
 
 ESincludes three commands: `preparation`, `deg` and `set`.
 
-The first step is to prepare the database using the command `preparation`. This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.uio.no/), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
+The first step is to prepare the database using the command `preparation`. This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.elixir.no), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
 
 The next step is depending on type of input data.
 
@@ -68,7 +69,7 @@ If you have only set of genes without any additional information as log2(fold ch
 
 ## Preparation
 
-This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.uio.no/), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
+This step requires (a) the library of motifs, which are extracted from the [JASPAR](https://jaspar.elixir.no), and (b) promoters of the same length in FASTA format [example](https://github.com/ubercomrade/esdeg/blob/main/example/hs.ensembl.promoters.fa.xz), which are set by the user. The results of the command `preparation` represent a database including the list of motifs and their annotations in `.npy` format. This database is used further as an input for `deg` and `set` commands.
 
 _Timing 40–120 min_
 
@@ -99,7 +100,7 @@ options:
 
 It's name of taxon that is avaliable in JASPAR database[^1]. Possible options for taxon are _plants_, _vertebrates_, _insects_, _urochordates_, _nematodes_, _fungi_.
 Only motifs from CORE COLLECTION and with length >= 8 are used for analysis.
-For more details see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html
+For more details see https://jaspar.elixir.no and https://pyjaspar.readthedocs.io/en/latest/index.html
 
 **Second positional argument** `promoters`:
 
@@ -358,9 +359,9 @@ ESDEG.py deg \
 ESDEG generates output file in tsv format.
 Here is example of file:
 
-| motif_id | tf_name | tf_class | jaspar_cluster | log2(or) | log10(pval) | log10(adj.pval) | adj.pval | genes_low_thr | genes_high_thr |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| MA0680.2 | Pax7 | Paired box factors | cluster_41 | 0.354260746038436 | -56.5585489729083 | -53.6399944423581 | 2.29089696905926E-54 | ENSG00000000971;ENSG00000008311;ENSG00000009694;... | ENSG00000009694;ENSG00000019549;ENSG00000078018;... |
+| motif_id | tf_name | tf_class | jaspar_cluster | log2(or) | log10(pval) | log10(adj.pval) | adj.pval | genes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| MA0680.2 | Pax7 | Paired box factors | cluster_41 | 0.354260746038436 | -56.5585489729083 | -53.6399944423581 | 2.29089696905926E-54 | ENSG00000000971;ENSG00000008311;ENSG00000009694;... |
 
 
 Where:
@@ -372,17 +373,16 @@ Where:
 
 **jaspar_cluster** - сluster to which the motif belongs (https://jaspar.genereg.net/matrix-clusters/)
 
-**log(or)** - it's -log2 transforamation of  odds ratio (OR). For the option `fraction` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach. Alternatively for the option `enrichment` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach.
+**log(or)** - it's -log2 transformation of  odds ratio (OR). For the option `fraction` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach. Alternatively for the option `enrichment` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach. The best log(or) value is represented in table. It's chosen by minimal p-value.
 
-**log10(pval)** - it's log10(combined p-value). Combined p-value is culculated by Hartung method[^5].
+**log10(pval)** - it's log10(combined p-value). Combined p-value is calculated by Hartung method[^5].
 
-**log10(adj.pval)** - it's log10(adjasted p-value) obtained by using Benjamini-Hochberg FDR correction.
+**log10(adj.pval)** - it's log10(adjusted p-value) obtained by using Benjamini-Hochberg FDR correction.
 
-**adj.pval** - it's adjasted p-value obtained by using Benjamini-Hochberg FDR correction.
+**adj.pval** - it's adjusted p-value obtained by using Benjamini-Hochberg FDR correction.
 
-**genes_low_thr** - list of genes with predicted sites (threshold(ERR) = 0.0005).
+**genes** - list of genes with predicted sites for the best case (min p-value).
 
-**genes_high_thr** - list of genes with predicted sites (threshold(ERR) = 0.0001).
 
 ## Results visualization
 
@@ -422,4 +422,4 @@ SOFTWARE.
 [^2]: Quinlan, A. R., & Hall, I. M. (2010). BEDTools: a flexible suite of utilities for comparing genomic features. Bioinformatics (Oxford, England), 26(6), 841–842. https://doi.org/10.1093/bioinformatics/btq033
 [^3]: Love, M. I., Huber, W., & Anders, S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, *15*(12), 550. https://doi.org/10.1186/s13059-014-0550-8
 [^4]: Monier, B., McDermaid, A., Wang, C., Zhao, J., Miller, A., Fennell, A., & Ma, Q. (2019). IRIS-EDA: An integrated RNA-Seq interpretation system for gene expression data analysis. *PLOS Computational Biology*, *15*(2), e1006792. https://doi.org/10.1371/journal.pcbi.1006792
-[^5]: Hartung, J. (1999). A note on combining dependent tests of significance. Biometrical Journal, 41(7), 849-855.
+[^5]: Cinar, O., & Viechtbauer, W. (2022). The poolr package for combining independent and dependent p values. Journal of Statistical Software, 101, 1-42. https://doi.org/10.18637/jss.v101.i01

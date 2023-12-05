@@ -41,6 +41,7 @@ def set_case(path_to_set, path_to_db,
     for index, motif_id in enumerate(metadata['motif_id'], 1):
         tf_name = metadata['tf_name'][index - 1]
         tf_class = metadata['tf_class'][index - 1]
+        number_of_uniq_fprs = metadata[motif_id]['number_of_uniq_fprs']
         line = {'motif_id': motif_id,
                 'tf_name': tf_name,
                 'tf_class': tf_class}
@@ -51,7 +52,10 @@ def set_case(path_to_set, path_to_db,
                                                                               ids,
                                                                               foreground_ids,
                                                                               other_ids)
-        out = run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter)
+        out, pvals, odds_ratios, index_of_best = run_test(genes, foreground,
+                                                          foreground_gc, other,
+                                                          other_gc, gc_threshold,
+                                                          parameter, number_of_uniq_fprs)
         line.update(out)
         results.append(line)
     df = pd.DataFrame(results)
@@ -62,4 +66,4 @@ def set_case(path_to_set, path_to_db,
     df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
     print('-'*30)
-    return df
+    return df, taxon

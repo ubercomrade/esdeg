@@ -14,7 +14,7 @@ except ImportError:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy>=1.10.0', 'plotly', 'pythran', 'biopython', 'pyjaspar']
+install_requires = ['setuptools>=18.0', 'pandas', 'numpy', 'scipy>=1.10.0', 'plotly', 'pythran', 'biopython', 'pyjaspar', 'xlsxwriter']
 setup(
     name='ESDEG',
     version='0.0.1',
@@ -27,6 +27,7 @@ setup(
     package_data={
         'esdeg': ['tomtom/*.tsv'],
         'esdeg': ['clusters/*.tsv'],
+        'esdeg': ['logos/*.png'],
     },
     scripts=['bin/ESDEG.py',],
     classifiers=[
