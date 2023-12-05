@@ -124,7 +124,7 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
                                        gc_threshold)
     log_pvalues=norm.logcdf(z_scores) # natural log
     log_pvalue = bonferroni_combined_log_pvalues(log_pvalues, number_of_uniq_fprs)
-    index_of_best = numpy.argmin(log_pvalues)
+    index_of_best = np.argmin(log_pvalues)
 
     genes_best = genes[np.greater_equal(foreground[:,index_of_best], 1)]
     odds_ratio_best = odds_ratios[index_of_best]
