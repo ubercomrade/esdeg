@@ -13,6 +13,8 @@ time ESDEG.py deg \
 ./matrices_db \
 ./ovol1.montecarlo.enrichment.tsv \
 --visualization ./ovol1.montecarlo.enrichment.html \
+--report ./ovol1.montecarlo.enrichment.report.html \
+--xlsx ./ovol1.montecarlo.enrichment.report.xlsx \
 --parameter enrichment \
 --regulated down
 

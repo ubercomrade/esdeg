@@ -78,6 +78,7 @@ def main():
         path_to_output = args.output
         path_to_vis = args.visualization
         path_to_xlsx = args.xlsx
+        path_to_report = args.report
         parameter = args.parameter
         condition = args.regulated
         padj_thr= args.pvalue
@@ -97,6 +98,8 @@ def main():
             create_picture(df, path_to_vis)
         if path_to_report != 'None':
             write_report(df, taxon, path_to_report)
+        if path_to_xlsx != 'None':
+            write_xlsx(df, taxon, path_to_xlsx)
         write_table(df, path_to_output)
 
     elif args.subparser_name == 'set':
@@ -104,6 +107,8 @@ def main():
         path_to_db = args.matrices
         path_to_output = args.output
         path_to_vis = args.visualization
+        path_to_xlsx = args.xlsx
+        path_to_report = args.report
         parameter = args.parameter
         gc_threshold = args.content
 
