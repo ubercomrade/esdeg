@@ -136,61 +136,41 @@ This command is used when you have comma-separated table including results of di
 _Timing from 10 seconds to 5 minutes_
 
 ``````
-usage: ESDEG.py [-h] {preparation,deg,set} ...
-
-positional arguments:
-  {preparation,deg,set}
-                        Available commands:
-    preparation         Run data base preparation
-    deg                 Run test on DEGs
-    set                 Run test on SET of genes
-
-options:
-  -h, --help            show this help message and exit
-(base) anton@pop-os:~/Tools/esdeg-main$ ESDEG.py deg -h
-usage: ESDEG.py deg [-h] [-v VISUALIZATION] [-p PARAMETER] [-r N] [-P PVALUE]
-                    [-l LOG2FC_DEG] [-L LOG2FC_BACK] [-c CONTENT]
+usage: ESDEG.py deg [-h] [-v VISUALIZATION] [-x XLSX] [-R REPORT] [-p PARAMETER] [-r N] [-P PVALUE] [-l LOG2FC_DEG] [-L LOG2FC_BACK]
+                    [-c CONTENT]
                     deg matrices output
 
 positional arguments:
-  deg                   Input file in CSV format with results of RNA-seq
-                        analysis. File must contain next columns: id,
+  deg                   Input file in CSV format with results of RNA-seq analysis. File must contain next columns: id,
                         log2FoldChange, padj
-  matrices              Directory with prepared database contained .npy files
-                        (e.g. /path/to/database)
-  output                Output file in TSV format (e.g.
-                        /path/to/output/file.tsv)
+  matrices              Directory with prepared database contained .npy files (e.g. /path/to/database)
+  output                Output file in TSV format (e.g. /path/to/output/file.tsv)
 
 options:
   -h, --help            show this help message and exit
   -v VISUALIZATION, --visualization VISUALIZATION
-                        Path to write interactive picture in HTML format
-                        (path/to/pic.html). if '--v' is given, then ESDEG
-                        creates picutre. By default it isn't used
+                        Path to write interactive picture in HTML format (path/to/pic.html). if '-v' is given, then ESDEG creates
+                        picutre. By default it isn't used
+  -x XLSX, --xlsx XLSX  Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if
+                        '-x' is given, then ESDEG creates XSLX table. By default it isn't used
+  -R REPORT, --report REPORT
+                        Path to write interactive table with results in HTML format (path/to/report.html). HTML report contains logo
+                        of motifs. if '-r' is given, then ESDEG creates HTML report. By default it isn't used
   -p PARAMETER, --parameter PARAMETER
-                        Parameter estimated in test (enrichment or fraction),
-                        default= enrichment
-  -r N, --regulated N   The parameter is used to choose up/down/all DEGs,
-                        default= all
+                        Parameter estimated in test (enrichment or fraction), default= enrichment
+  -r N, --regulated N   The parameter is used to choose up/down/all DEGs, default= all
   -P PVALUE, --pvalue PVALUE
-                        The pvalue is used as threshold to choose DEGs,
-                        default= 0.05
+                        The pvalue is used as threshold to choose DEGs, default= 0.05
   -l LOG2FC_DEG, --log2fc_deg LOG2FC_DEG
-                        The absolute value of log2FoldChange used as threshold
-                        (L2FC_THR) to choose DEGs promoters (actual L2FC >=
+                        The absolute value of log2FoldChange used as threshold (L2FC_THR) to choose DEGs promoters (actual L2FC >=
                         L2FC_THR OR actual L2FC <= -L2FC_THR), default= 1.0
   -L LOG2FC_BACK, --log2fc_back LOG2FC_BACK
-                        The absolute value of log2FoldChange used as threshold
-                        (L2FC_BACK_THR) to choose background promoters
-                        (-L2FC_BACK_THR <= actual L2FC <= L2FC_BACK_THR),
-                        default= log2(5/4)=0.321928...
+                        The absolute value of log2FoldChange used as threshold (L2FC_BACK_THR) to choose background promoters
+                        (-L2FC_BACK_THR <= actual L2FC <= L2FC_BACK_THR), default= log2(5/4)=0.321928...
   -c CONTENT, --content CONTENT
-                        The maximal GC content difference between promoters of
-                        foreground and background in Monte Carlo algorithm.
-                        Range of possible threshold [0.01 .. 1.0]. If
-                        threshold is equal to 1.0 then GC content is not taken
-                        into account. In this case (thr = 1.0) algorithm works
-                        faster. Default= 0.3.
+                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm.
+                        Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into
+                        account. In this case (thr = 1.0) algorithm works faster. Default= 0.3.
 ``````
 
 #### Required arguments description
@@ -232,29 +212,37 @@ Print help to STDOUT
 
 **Second optional argument** `-v; --visualization` :
 
-HTML output report contained graphical files (e.g. /path/to/file/with/graphics.html). Plotly is used for visualization.
+It's path to write HTML report contained dotplot (log2(OR) vs -log10(padj)) (e.g. /path/to/file/with/graphics.html). Plotly is used for visualization.
 
-**Third optional argument** `-p; --parameter` :
+**Third optional argument** `-x; --xlsx` :
+
+It's path to write results in XLSX format. For this format logo is ploted for each motif in last column.
+
+**Fourth optional argument** `-R; --report` :
+
+It's path to write results in HTML format. For this format logo is ploted for each motif in last column.
+
+**Fifth optional argument** `-p; --parameter` :
 
 The value of `-p; --parameter ` can be  _enrichment_ or _fraction_. If you choose _enrichment_ option, statistics is calculated based on the number of predicted sites in promoters of DEGs. In this case the number of predicted sites in each promoter influence the result. If you choose _fraction_ option, statistics is calculated based on the number of DEGs with predicted sites. In this case the number of predicted sites in each promoter is not so important. The default value is _enrichment_.
 
-**Fourth optional argument** `-r; --regulated` :
+**Sixth optional argument** `-r; --regulated` :
 
 The argument `-r/--regulated` are used to choose DEGs: `down` (promoters of down regulated genes), `up` (promoters of up regulated genes) and `all` (promoters of up and down regulated genes). The default value is _all_.
 
-**Fifth optional argument** `-p; --pvalue` :
+**Seventh optional argument** `-p; --pvalue` :
 
 The argument  `-p; --pvalue ` is p-value threshold (_P_THR_) for DEGs selection (actual p-value of gene <= _P_THR_). The default value is _0.05_.
 
-**Sixth optional argument** `-l; --log2fc_deg` :
+**Eighth optional argument** `-l; --log2fc_deg` :
 
 The argument  `-l; --log2fc_deg ` is Log2FoldChange threshold (_L2FC_THR_) for DEGs selection (actual value of Log2FoldChange of gene >= _L2FC_THR_ OR actual Log2FoldChange of gene <= -_L2FC_THR_). The default value is _1_.
 
-**Seventh optional argument** `-l; --log2fc_back` :
+**Ninth optional argument** `-l; --log2fc_back` :
 
 The argument  `-l; --log2fc_back ` is Log2FoldChange threshold for background (_L2FC_BACK_THR_) selection (-_L2FC_BACK_THR_ <= actual value of Log2FoldChange of gene <= _L2FC_BACK_THR_). The default value is _log2(5/4) = 0.376287495_.
 
-**Eighth optional argument** `-c; --content` :
+**Tenth optional argument** `-c; --content` :
 
 The argument `-c; --content` is used to set threshold of GC content for generating background.
 
@@ -266,8 +254,7 @@ This command is used when you have only set of genes from arbitrary source witho
 _Timing from 10 seconds to 5 minutes_
 
 ````
-usage: ESDEG.py set [-h] [-v VISUALIZATION] [-p PARAMETER] [-c CONTENT]
-                    set matrices output
+usage: ESDEG.py set [-h] [-v VISUALIZATION] [-x XLSX] [-R REPORT] [-p PARAMETER] [-c CONTENT] set matrices output
 
 positional arguments:
   set                   File with list of genes.
@@ -277,19 +264,19 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -v VISUALIZATION, --visualization VISUALIZATION
-                        Path to write interactive picture in HTML format
-                        (path/to/pic.html). if '--v' is given, then ESDEG
-                        creates picutre. By default it isn't used
+                        Path to write interactive picture in HTML format (path/to/pic.html). if '-v' is given, then ESDEG creates
+                        picutre. By default it isn't used
+  -x XLSX, --xlsx XLSX  Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if
+                        '-x' is given, then ESDEG creates XSLX table. By default it isn't used
+  -R REPORT, --report REPORT
+                        Path to write interactive table with results in HTML format (path/to/report.html). HTML report contains logo
+                        of motifs. if '-r' is given, then ESDEG creates HTML report. By default it isn't used
   -p PARAMETER, --parameter PARAMETER
-                        Parameter estimated in test (enrichment or fraction),
-                        default= enrichment
+                        Parameter estimated in test (enrichment or fraction), default= enrichment
   -c CONTENT, --content CONTENT
-                        The maximal GC content difference between promoters of
-                        foreground and background in Monte Carlo algorithm.
-                        Range of possible threshold [0.01 .. 1.0]. If
-                        threshold is equal to 1.0 then GC content is not taken
-                        into account. In this case (thr = 1.0) algorithm works
-                        faster. Default= 0.3.
+                        The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm.
+                        Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into
+                        account. In this case (thr = 1.0) algorithm works faster. Default= 0.3.
 ````
 
 #### Required arguments description
@@ -325,11 +312,19 @@ Print help to STDOUT
 
 HTML output report contained graphical files (e.g. /path/to/file/with/graphics.html). Plotly is used for visualization.
 
-**Third optional argument** `-p; --parameter` :
+**Third optional argument** `-x; --xlsx` :
+
+It's path to write results in XLSX format. For this format logo is ploted for each motif in last column.
+
+**Fourth optional argument** `-R; --report` :
+
+It's path to write results in HTML format. For this format logo is ploted for each motif in last column.
+
+**Fifth optional argument** `-p; --parameter` :
 
 The value of `-p; --parameter ` can be  _enrichment_ or _fraction_. If you choose _enrichment_ option, statistics is calculated based on the number of predicted sites in promoters of DEGs. In this case the number of predicted sites in each promoter influence the result. If you choose _fraction_ option, statistics is calculated based on the number of DEGs with predicted sites. In this case the number of predicted sites in each promoter is not so important. The default value is _enrichment_.
 
-**Fourth optional argument** `-c; --content` :
+**Sixth optional argument** `-c; --content` :
 
 The argument `-c; --content` is used to set threshold of G/C content for generating background.\
 
@@ -382,6 +377,8 @@ Where:
 **adj.pval** - it's adjusted p-value obtained by using Benjamini-Hochberg FDR correction.
 
 **genes** - list of genes with predicted sites for the best case (min p-value).
+
+**logo** - for XLSX and HTML format files contain `logo` column instead of `genes`.
 
 
 ## Results visualization
