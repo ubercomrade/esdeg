@@ -56,7 +56,7 @@ def deg_case(path_to_deg, path_to_db,
                                                                               ids,
                                                                               foreground_ids,
                                                                               other_ids)
-        out, pvals, odds_ratios, index_of_best = run_test(genes, foreground,
+        out, log_pvalues, odds_ratios, index_of_best = run_test(genes, foreground,
                                                           foreground_gc, other,
                                                           other_gc, gc_threshold,
                                                           parameter, number_of_uniq_fprs)

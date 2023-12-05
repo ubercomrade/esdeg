@@ -133,7 +133,7 @@ def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, pa
     results = {'log2(or)': np.log2(np.max(odds_ratios)),
                'ln(pval)': log_pvalue,
                'genes': ';'.join(list(genes_best))}
-    return results, pvals, odds_ratios, index_of_best
+    return results, log_pvalues, odds_ratios, index_of_best
 
 
 # def run_test(genes, foreground, foreground_gc, other, other_gc, gc_threshold, parameter):
