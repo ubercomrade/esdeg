@@ -26,9 +26,10 @@ these Python packages via ``pip``:
   * biopython
   * pyjaspar
   * xlsxwriter
+  * panel
 
 ```
-pip install numpy, scipy, plotly, pythran, pandas, biopython, pyjaspar, xlsxwriter
+pip install numpy, scipy, plotly, pythran, pandas, biopython, pyjaspar, xlsxwriter, panel
 ```
 
 ## Installation
