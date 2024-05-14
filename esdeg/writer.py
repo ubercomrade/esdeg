@@ -1,23 +1,40 @@
 import os
 import plotly.express as px
 import xlsxwriter
-import pkg_resources
 import numpy as np
 import pandas as pd
 import panel as pn
+from importlib import resources
 
 def write_table(df, path_to_output):
-    #df = df[['motif_id', 'tf_name', 'tf_class', 'log(or)', 'pval', 'adj.pval', 'genes']]
-    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
+    if 'jaspar_cluster' in df.index:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
+    else:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
     df = df.sort_values(by='log10(adj.pval)')
     df.to_csv(path_to_output, sep='\t', index=False)
     print('All done. Exit')
     pass
 
 
+def write_table_ann(df, path_to_output):
+    if 'jaspar_cluster' in df.index:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+    else:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+    df = df.sort_values(by='me_padj')
+    df.to_csv(path_to_output, sep='\t', index=False)
+    print('All done. Exit')
+    pass
+
+
+
 def write_xlsx(df, taxon, path_to_output):
 
-    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval']]
+    if 'jaspar_cluster' in df.index:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval']]
+    else:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval']]
     df = df.sort_values(by='log10(adj.pval)')
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
@@ -33,7 +50,7 @@ def write_xlsx(df, taxon, path_to_output):
 
     image_row = 1
     image_col = 8
-    images = list(df.motif_id.map(lambda id: pkg_resources.resource_filename('esdeg', f'logos/{taxon}/{id}.png')))
+    images = list(df.motif_id.map(lambda id: resources.files('esdeg').joinpath(f'logos/{taxon}/{id}.png')))
     for image in images:
         worksheet.insert_image(image_row,
                                image_col,
@@ -69,8 +86,84 @@ def write_xlsx(df, taxon, path_to_output):
     return 0
 
 
+def write_xlsx_ann(df, path_to_output):
+
+    if 'jaspar_cluster' in df.index:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj']]
+    else:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj']]
+
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(path_to_output, engine='xlsxwriter')
+
+    # Convert the dataframe to an XlsxWriter Excel object.
+    df.to_excel(writer, sheet_name='ESDEG', index=False)
+
+    # Get the xlsxwriter objects from the dataframe writer object.
+    workbook  = writer.book
+    worksheet = writer.sheets['ESDEG']
+    worksheet.set_default_row(27)
+
+    image_row = 1
+    image_col = len(df.columns)
+
+    taxons = os.listdir(resources.files('esdeg').joinpath('logos'))
+    number_of_taxons = len(taxons)
+    images = []
+    for i in df['motif_id']:
+        img_flag = True
+        for index, taxon in enumerate(taxons):
+            img_path = resources.files('esdeg').joinpath(f'logos/{taxon}/{i}.png')
+            if os.path.exists(img_path):
+                images.append(img_path)
+                img_flag = False
+                break
+        if img_flag:
+            print(f'Probably logo of motif {i} doesnt exist')
+            images.append('NA')
+
+    for image in images:
+        worksheet.insert_image(image_row,
+                               image_col,
+                               image,
+                               {'x_scale': 1.2, 'y_scale': 1.2,
+                                'x_offset': 5, 'y_offset': 5,
+                                'positioning': 1})
+        # positioning = 1 allows move and size with cells (may not always perform as expected)
+        image_row += 1
+    cell_format = workbook.add_format()
+    cell_format.set_bold(True)
+    cell_format.set_border(True)
+    cell_format.set_align('center')
+    cell_format.set_align('top')
+
+    cell_format_2 = workbook.add_format()
+    cell_format_2.set_align('center')
+    cell_format_2.set_align('vcenter')
+
+
+    worksheet.set_column(0, 0, 10, cell_format_2)
+    worksheet.set_column(1, 1, 14, cell_format_2)
+    worksheet.set_column(2, 2, 30, cell_format_2)
+    worksheet.set_column(3, 2, 30, cell_format_2)
+    worksheet.set_column(4, 7, 14, cell_format_2)
+    # worksheet.set_column(4, 4, 13, cell_format_2)
+    # worksheet.set_column(5, 5, 11, cell_format_2)
+    # worksheet.set_column(6, 6, 14, cell_format_2)
+    worksheet.set_column(image_col, image_col, 48)
+    worksheet.set_row_pixels(0, 18, cell_format)
+    #worksheet.autofit()
+    worksheet.write(0, image_col, 'logo', cell_format)
+    writer.close()
+    return 0
+
+
 def write_report(df, taxon, path_to_output):
-    df = df[['motif_id', 'tf_name', 'tf_class', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
+    if 'jaspar_cluster' in df.index:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
+    else:
+        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
     df = df.sort_values(by='log10(adj.pval)')
     df = df[df.columns[:-1]]
     df['logo'] = df.motif_id.map(lambda id: f'https://raw.githubusercontent.com/ubercomrade/esdeg/main/esdeg/logos/{taxon}/{id}.png')

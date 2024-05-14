@@ -21,14 +21,15 @@ def deg_case(path_to_deg, path_to_db,
     gc_content = np.array(metadata['gc'])
     ids = np.array(metadata['ids'])
     taxon = metadata['taxon']
-    cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
-    motif_to_cluster = get_motif_to_cluster(cluster_path)
     print('-'*30)
 
     print('Read DEG table')
     deg_table = pd.read_csv(path_to_deg, sep=',', comment='#')
     deg_table = deg_table[deg_table['padj'] <= 1]
     foreground_ids = get_deg_gene_ids(deg_table, condition, padj_thr=padj_thr, log2fc_thr=log2fc_thr_deg)
+    if len(foreground_ids) <= 5:
+        ll = len(foreground_ids)
+        print(f'WARNING: Namber of DEGs ({ll}) is dramaticaly low!')
     check_intersection = np.sum(np.in1d(foreground_ids, ids, assume_unique=True))
     if check_intersection == 0:
         print(f'There are no common IDs in the database with the DEG IDs. Maybe different identifiers are used. Exit.')
@@ -69,7 +70,11 @@ def deg_case(path_to_deg, path_to_db,
     df['adj.pval'] = np.exp(lg_adj_pval)
     df['log10(pval)'] = df['ln(pval)'] / np.log(10) # from loge to log10
     df['log10(adj.pval)'] = lg_adj_pval / np.log(10) # from loge to log10
-    df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
+
+    if metadata['db'] == 'jaspar':
+        cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
+        motif_to_cluster = get_motif_to_cluster(cluster_path)
+        df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
     print('-'*30)
     return df, taxon

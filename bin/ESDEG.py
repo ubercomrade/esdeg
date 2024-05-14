@@ -4,24 +4,34 @@ import argparse
 import pkg_resources
 from esdeg.set import set_case
 from esdeg.deg import deg_case
-from esdeg.preparation import prepare_motif_db
-from esdeg.writer import write_table, write_xlsx, write_report, create_picture
+from esdeg.preparation_hocomoco import prepare_motif_db as hocomoco_db
+from esdeg.preparation_jaspar import prepare_motif_db as jaspar_db
+from esdeg.writer import write_table, write_table_ann, \
+write_xlsx, write_xlsx_ann, write_report, create_picture
+from esdeg.annotation import annotation
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser_name', help='Available commands:')
-    preparation_parser = subparsers.add_parser('preparation', help='Run data base preparation')
+    jaspar_preparation_parser = subparsers.add_parser('jaspar', help='Run preparation DB based on JASPAR 2024 motifs (motifs are selected based on taxon)')
+    hocomoco_preparation_parser = subparsers.add_parser('hocomoco', help='Run preparation DB based on HOCOMOCO 2024 motifs (all core motifs are used [M. musculus and H. sapiens])')
     deg_parser = subparsers.add_parser('deg', help='Run test on DEGs')
     set_parser = subparsers.add_parser('set', help='Run test on SET of genes')
+    annotation_parser = subparsers.add_parser('annotation', help='Add expression level and different expression data for each TF/motif to filter ESDEG results')
 
-    preparation_parser.add_argument('taxon', action='store', choices=['plants', 'vertebrates', 'insects', 'urochordates', 'nematodes', 'fungi'],
+    jaspar_preparation_parser.add_argument('taxon', action='store', choices=['plants', 'vertebrates', 'insects', 'urochordates', 'nematodes', 'fungi'],
         help='Prepare database for respective JASPAR CORE taxonomic group of motifs. Possible options are plants, vertebrates, insects, urochordates, nematodes, fungi. \
         For more detailes see https://jaspar.uio.no/ and https://pyjaspar.readthedocs.io/en/latest/index.html')
-    preparation_parser.add_argument('promoters', action='store', metavar='promoters',
+    jaspar_preparation_parser.add_argument('promoters', action='store', metavar='promoters',
          help='Path to promoters in fasta format. All promoters have to be with same length. After the symbol ">" unique gene ID has to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
-    preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
-    preparation_parser.add_argument('-p', '--nproc', action='store', type=int, default=4, help='Number of processes to split the work between. Default= 4')
+    jaspar_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
+    jaspar_preparation_parser.add_argument('-p', '--nproc', action='store', type=int, default=4, help='Number of processes to split the work between. Default= 4')
+
+    hocomoco_preparation_parser.add_argument('promoters', action='store', metavar='promoters',
+         help='Path to promoters in fasta format. All promoters have to be with same length. After the symbol ">" unique gene ID has to be written (>ENSG00000160072::1:1469886-1472284 or >ENSG00000160072)')
+    hocomoco_preparation_parser.add_argument('output', action='store', help='Name of directory to write output files')
+    hocomoco_preparation_parser.add_argument('-p', '--nproc', action='store', type=int, default=4, help='Number of processes to split the work between. Default= 4')
 
     deg_parser.add_argument('deg', action='store', help='Input file in CSV format with results of RNA-seq analysis. File must contain next columns: id, log2FoldChange, padj')
     deg_parser.add_argument('matrices', action='store', help='Directory with prepared database contained .npy files (e.g. /path/to/database)')
@@ -64,6 +74,28 @@ def parse_args():
                         help='The maximal GC content difference between promoters of foreground and background in Monte Carlo algorithm. \
                         Range of possible threshold [0.01 .. 1.0]. If threshold is equal to 1.0 then GC content is not taken into account. \
                         In this case (thr = 1.0) algorithm works faster. Default= 0.3.')
+
+
+    annotation_parser.add_argument('esdeg', action='store', help='Path to esdeg result in TSV format')
+    annotation_parser.add_argument('deg', action='store', help='Input file in CSV format with results of RNA-seq analysis. File must contain next columns: id, log2FoldChange, padj')
+    annotation_parser.add_argument('counts', action='store', help='Input file in CSV format with normalized counts of read (FPKM or other). File must contain next columns: id, counts')
+    annotation_parser.add_argument('gtf', action='store', help='Input file in GTF format with genome features annotation (ENSEMBL is prefered). It`s used to convert gene names and IDs')
+    annotation_parser.add_argument('output', action='store', help='Path to write table with annotated ESDEG results. Table includes information related to expression level and different expression level of each TF/motif')
+    annotation_parser.add_argument('-x', '--xlsx', action='store', type=str, default='None',
+                            help="Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if '-x' is given, then ESDEG creates XSLX table. By default it isn't used")
+    annotation_parser.add_argument('-f', '--filter', action='store_true', dest='filter',
+                        required=False, help='If this argument is used, then filtration will be applied to ESDEG table based on expression level of TFs.')
+    annotation_parser.add_argument('-m', '--me_padj', action='store', type=float, default=0.05,
+                        help='p-value threshold for motif enrichment (adj.pval column in table. adj.pval will be renamed to me_padj). Default value = 0.05. Applied only when flag --filter is used.')
+    annotation_parser.add_argument('-l', '--log_odds', action='store', type=float, default=1.,
+                        help='log(odds ratio) threshold for motif enrichment (log2(or) column in table). Default value = 1.0. Applied only when flag --filter is used.')
+    annotation_parser.add_argument('-d', '--de_padj', action='store', type=float, default=0.05,
+                        help='p-value threshold for DEGs. It`s used to found TF among DEGs. Default value = 0.05. Applied only when flag --filter is used.')
+    annotation_parser.add_argument('-L', '--log_fc', action='store', type=float, default=1.,
+                        help='log(fold change) threshold for DEGs. It`s used to found TF among DEGs. Default value = 1.0. Applied only when flag --filter is used.')
+    annotation_parser.add_argument('-n', '--ncounts', action='store', type=float, default=5.,
+                    help='Counts threshold (expression level threshold) for genes.  It`s used to remove TFs that are not expressed (With the exception of TFs, which are DEGs). Default value = 5.0. Applied only when flag --filter is used.')
+
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
@@ -125,7 +157,7 @@ def main():
             write_xlsx(df, taxon, path_to_xlsx)
         write_table(df, path_to_output)
 
-    elif args.subparser_name == 'preparation':
+    elif args.subparser_name == 'jaspar':
         taxon = args.taxon
         output_dir = args.output
         path_to_promoters = args.promoters
@@ -133,10 +165,47 @@ def main():
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        prepare_motif_db(output_dir,
+        jaspar_db(output_dir,
             path_to_promoters,
             taxon,
             nproc)
+
+
+    elif args.subparser_name == 'hocomoco':
+        output_dir = args.output
+        path_to_promoters = args.promoters
+        nproc = args.nproc
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+
+        hocomoco_db(output_dir,
+            path_to_promoters,
+            nproc)
+
+    elif args.subparser_name == 'annotation':
+
+        path_to_output = args.output
+        deg_path = args.deg
+        counts_path = args.counts
+        esdeg_path = args.esdeg
+        gtf_path = args.gtf
+
+        path_to_xlsx = args.xlsx
+        filter_flag = args.filter
+        me_padj_thr = args.me_padj
+        de_padj_thr = args.de_padj
+        lor_thr = args.log_odds
+        lfc_thr = args.log_fc
+        counts_filter = args.ncounts
+
+        df = annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag,
+               me_padj_thr, de_padj_thr, lor_thr, lfc_thr, counts_filter)
+
+        if path_to_xlsx != 'None':
+            write_xlsx_ann(df, path_to_xlsx)
+        write_table_ann(df, path_to_output)
+
+
     pass
 
 

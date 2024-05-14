@@ -60,6 +60,24 @@ def to_score(matrix, norm_value):
     return score
 
 
+def pfm_to_pwm_hocomoco(pfm):
+    background = 0.25
+    pwm = np.log2((pfm + 0.01) / background)
+    return pwm
+
+
+def pfm_to_pwm_cisbp(pfm):
+    background = 0.25
+    pwm = np.log2((pfm + 0.01) / background)
+    return pwm
+
+
+def hocomoco_to_pwm(motif_data):
+    pfm = np.array(motif_data['pfm']).T
+    pwm = pfm_to_pwm_hocomoco(pfm)
+    return pwm
+
+
 def jaspar_to_pwm(motif):
     pcm = motif.counts
     pcm = dict_to_array(pcm)

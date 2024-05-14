@@ -18,8 +18,6 @@ def set_case(path_to_set, path_to_db,
     gc_content = np.array(metadata['gc'])
     ids = np.array(metadata['ids'])
     taxon = metadata['taxon']
-    cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
-    motif_to_cluster = get_motif_to_cluster(cluster_path)
     print('-'*30)
 
     print('Read SET of genes')
@@ -65,7 +63,11 @@ def set_case(path_to_set, path_to_db,
     df['adj.pval'] = np.exp(lg_adj_pval)
     df['log10(pval)'] = df['ln(pval)'] / np.log(10) # from loge to log10
     df['log10(adj.pval)'] = lg_adj_pval / np.log(10) # from loge to log10
-    df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
+
+    if metadata['db'] == 'jaspar':
+        cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
+        motif_to_cluster = get_motif_to_cluster(cluster_path)
+        df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
     print('-'*30)
     return df, taxon
