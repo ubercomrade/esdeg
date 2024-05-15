@@ -19,6 +19,7 @@ def create_gname_converter(gtf_path):
 def read_esdeg_table(esdeg_path):
     esdeg = pd.read_csv(esdeg_path, sep='\t')
     esdeg = esdeg[esdeg['tf_family'] != 'NA']
+    esdeg['tf_name'] = esdeg['tf_name'].str.upper()
     esdeg = esdeg.reset_index(drop=True)
 
     #split dimers (JASPAR)
