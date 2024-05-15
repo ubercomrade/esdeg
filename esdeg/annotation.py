@@ -45,14 +45,14 @@ def read_esdeg_table(esdeg_path):
     esdeg = esdeg.sort_values(by='adj.pval')
     # end split
 
-    esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
-    esdeg = esdeg.set_index(['tf_name'])
+    #esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
+    #esdeg = esdeg.set_index(['tf_name'])
     esdeg = esdeg.rename(columns={"adj.pval": "me_padj"})
     esdeg = esdeg.drop(columns=['log10(pval)', 'log10(adj.pval)'])
     return esdeg
 
 
-def annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag,
+def annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag=False, best_flag=False,
                me_padj_thr=0.05, de_padj_thr=0.05, lor_thr=1., lfc_thr=1., counts_filter=5):
 
 
@@ -77,9 +77,9 @@ def annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag,
 
 
     # ANNOTATED ESDEG
-    esdeg = esdeg.assign(counts = [counts.loc[i]['counts'] if i in counts.index else 0 for i in esdeg.index])
-    esdeg = esdeg.assign(lfc = [deg.loc[i]['log2FoldChange'] if i in deg.index else 0 for i in esdeg.index])
-    esdeg = esdeg.assign(de_padj = [deg.loc[i]['padj'] if i in deg.index else 0 for i in esdeg.index])
+    esdeg = esdeg.assign(counts = [counts.loc[i]['counts'] if i in counts.index else 0 for i in esdeg['tf_name']])
+    esdeg = esdeg.assign(lfc = [deg.loc[i]['log2FoldChange'] if i in deg.index else 0 for i in esdeg['tf_name']])
+    esdeg = esdeg.assign(de_padj = [deg.loc[i]['padj'] if i in deg.index else 0 for i in esdeg['tf_name']])
 
     if filter_flag:
         esdeg = esdeg[esdeg['me_padj'] < me_padj_thr]
@@ -87,9 +87,11 @@ def annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag,
         summary_deg = esdeg[np.logical_and(esdeg['de_padj'] < de_padj_thr, np.abs(esdeg['lfc']) > lfc_thr)]
         summary_counts = esdeg[esdeg['counts'] > counts_filter]
         esdeg = pd.concat([summary_deg, summary_counts])
+        esdeg = esdeg[~esdeg.index.duplicated(keep='first')]
 
-    esdeg = esdeg.reset_index()
-    esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
     esdeg = esdeg.sort_values(by='de_padj')
+    if best_flag:
+        esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
     esdeg = esdeg[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+    esdeg = esdeg.reset_index(drop=True)
     return esdeg

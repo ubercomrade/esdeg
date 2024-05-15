@@ -83,6 +83,8 @@ def parse_args():
     annotation_parser.add_argument('output', action='store', help='Path to write table with annotated ESDEG results. Table includes information related to expression level and different expression level of each TF/motif')
     annotation_parser.add_argument('-x', '--xlsx', action='store', type=str, default='None',
                             help="Path to write table with results in XLSX format (path/to/table.xlsx). XLSX table contains logo of motifs. if '-x' is given, then ESDEG creates XSLX table. By default it isn't used")
+    annotation_parser.add_argument('-b', '--best', action='store_true', dest='best',
+                        required=False, help='If this argument is used, then for each TF only the motif with best enrichment will be left (Some times TF have several motifs in DB)')
     annotation_parser.add_argument('-f', '--filter', action='store_true', dest='filter',
                         required=False, help='If this argument is used, then filtration will be applied to ESDEG table based on expression level of TFs.')
     annotation_parser.add_argument('-m', '--me_padj', action='store', type=float, default=0.05,
@@ -191,6 +193,7 @@ def main():
         gtf_path = args.gtf
 
         path_to_xlsx = args.xlsx
+        best_flag = args.best
         filter_flag = args.filter
         me_padj_thr = args.me_padj
         de_padj_thr = args.de_padj
@@ -198,7 +201,7 @@ def main():
         lfc_thr = args.log_fc
         counts_filter = args.ncounts
 
-        df = annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag,
+        df = annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag, best_flag,
                me_padj_thr, de_padj_thr, lor_thr, lfc_thr, counts_filter)
 
         if path_to_xlsx != 'None':

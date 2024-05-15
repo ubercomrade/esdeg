@@ -409,14 +409,11 @@ The argument `-c; --content` is used to set threshold of G/C content for generat
 
 ESDEG results can be complemented with gene expression information to improve filtering and refine reliable TFs. Expression level values (FPKM) as well as expression level changes (log2(Fold Change)) and its significance (padj) are given for all TFs that are included in the list of motifs. For this step you have to have results of RNA-seq analysis of different gene expression ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-MTAB-6598.degs.csv)) and normalized counts (FPKM or other) ([example](https://github.com/ubercomrade/esdeg/blob/main/example/E-MTAB-6598.fpkm.csv)).
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) **IMPORTANT! Even if you do not use the `--filter` command (see below), if there are several motifs for one TF, the resulting table will contain only the best enriched motif for that TF**
-
 
 _Timing from 1 minutes to 5 minutes_
 
 ```
-ESDEG annotation -h
-usage: ESDEG annotation [-h] [-x XLSX] [-f] [-m ME_PADJ] [-l LOG_ODDS]
+usage: ESDEG annotation [-h] [-x XLSX] [-b] [-f] [-m ME_PADJ] [-l LOG_ODDS]
                         [-d DE_PADJ] [-L LOG_FC] [-n NCOUNTS]
                         esdeg deg counts gtf output
 
@@ -441,6 +438,9 @@ options:
                         (path/to/table.xlsx). XLSX table contains logo of
                         motifs. if '-x' is given, then ESDEG creates XSLX
                         table. By default it isn't used
+  -b, --best            If this argument is used, then for each TF only the
+                        motif with best enrichment will be left (Some times TF
+                        have several motifs in DB)
   -f, --filter          If this argument is used, then filtration will be
                         applied to ESDEG table based on expression level of
                         TFs.
@@ -529,7 +529,11 @@ Print help to STDOUT
 
 It's path to write results in XLSX format. For this format logo is ploted for each motif in last column.
 
-**Third optional argument** `-f; --filter` :
+**Third optional argument** `-b; --best` :
+
+ If this argument is used, then filtration will be applied to ESDEG table based on enrichment of motifs and expression level of TFs. For filtration next parameters are used:
+
+**Fourth optional argument** `-f; --filter` :
 
  If this argument is used, then filtration will be applied to ESDEG table based on enrichment of motifs and expression level of TFs. For filtration next parameters are used:
 
@@ -540,23 +544,23 @@ It's path to write results in XLSX format. For this format logo is ploted for ea
 5. `--ncounts` - counts threshold (expression level threshold) for
    genes.
 
-**Fourth optional argument** `-m; --me_padj` :
+**Fifth optional argument** `-m; --me_padj` :
 
 The p-value threshold for motif enrichment (adj.pval column in table. adj.pval will be renamed to me_padj). Default value = 0.05. Applied only when flag `--filter` is used.
 
-**Fifth optional argument** `-l; --log_odds` :
+**Sixth optional argument** `-l; --log_odds` :
 
 The log(odds ratio) threshold for motif enrichment (log2(or) column in table). Default value = 1.0. Applied only when flag `--filter` is used.
 
-**Sixth optional argument** `-d; --de_padj` :
+**Seventh optional argument** `-d; --de_padj` :
 
 The p-value threshold for DEGs. It is used to found TF among DEGs. Default value = 0.05. Applied only when flag `--filter` is used.
 
-**Seventh optional argument** `-L; --log_fc` :
+**Eighth optional argument** `-L; --log_fc` :
 
 The log(fold change) threshold for DEGs. It is used to found TF among DEGs. Default value = 1.0. Applied only when flag `--filter` is used.
 
-**Eighth optional argument** `-L; --log_fc` :
+**Ninth optional argument** `-L; --log_fc` :
 
 The counts threshold (expression level threshold) for genes. It is used to remove TFs that are not expressed (With the exception of TFs, which are DEGs). Default value = 5.0. Applied only when flag `--filter` is used.
 
