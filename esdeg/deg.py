@@ -1,8 +1,8 @@
 import sys
 import json
-import pkg_resources
 import pandas as pd
 import numpy as np
+from importlib import resources
 from esdeg.functions import run_test, get_deg_gene_ids, get_other_gene_ids_for_deg_case, split_by_gene_ids, get_motif_to_cluster, fdrcorrection_log
 
 
@@ -72,7 +72,7 @@ def deg_case(path_to_deg, path_to_db,
     df['log10(adj.pval)'] = lg_adj_pval / np.log(10) # from loge to log10
 
     if metadata['db'] == 'jaspar':
-        cluster_path = pkg_resources.resource_filename('esdeg', f'clusters/{taxon}.tsv')
+        cluster_path = resources.files('esdeg').joinpath(f'clusters/{taxon}.tsv')
         motif_to_cluster = get_motif_to_cluster(cluster_path)
         df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 

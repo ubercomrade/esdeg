@@ -82,20 +82,21 @@ This step requires (a) the library of motifs, which are extracted from the [JASP
 _Timing 40–120 min_
 
 ```
-usage: ESDEG preparation [-h]
-                            {plants,vertebrates,insects,urochordates,nematodes,fungi}
-                            N output
+usage: ESDEG jaspar [-h] [-p NPROC]
+                    {plants,vertebrates,insects,urochordates,nematodes,fungi}
+                    promoters output
 
 positional arguments:
   {plants,vertebrates,insects,urochordates,nematodes,fungi}
                         Prepare database for respective JASPAR CORE taxonomic
                         group of motifs. Possible options are plants,
                         vertebrates, insects, urochordates, nematodes, fungi.
-                        For more details see https://jaspar.uio.no/ and
+                        For more detailes see https://jaspar.uio.no/ and
                         https://pyjaspar.readthedocs.io/en/latest/index.html
   promoters             Path to promoters in fasta format. All promoters have
-                        to be with same length. After the symbol ">" unique gene ID has
-                        to be written (>ENSG00000160072::1:1469886-1472284 or
+                        to be with same length. After the symbol ">" unique
+                        gene ID has to be written
+                        (>ENSG00000160072::1:1469886-1472284 or
                         >ENSG00000160072)
   output                Name of directory to write output files
 

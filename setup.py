@@ -19,7 +19,7 @@ setup(
         'esdeg': ['clusters/*.tsv'],
         'esdeg': ['logos/*.png'],
     },
-    #scripts=['bin/ESDEG.py',],
+    scripts=['bin/ESDEG.py',],
     entry_points={
         "console_scripts": [
             "ESDEG = bin.ESDEG:main",
