@@ -76,5 +76,31 @@ def deg_case(path_to_deg, path_to_db,
         motif_to_cluster = get_motif_to_cluster(cluster_path)
         df['jaspar_cluster'] = [motif_to_cluster[i] for i in df['motif_id']]
 
+    #split dimers (JASPAR)
+    if metadata['db'] == 'jaspar':
+        df['tf_name'] = df['tf_name'].str.split('::')
+        df['tf_class'] = df['tf_class'].str.split('::')
+        df['tf_family'] = df['tf_family'].str.split('::')
+
+
+        # fix number of Class and Family (reason is MA1628.2, JASPAR bug)
+        container = []
+        for index, i in df.iterrows():
+            if len(i['tf_name']) != len(i['tf_class']) and len(i['tf_class']) != len(i['tf_family']):
+                length = np.max([len(i['tf_name']), len(i['tf_class']), len(i['tf_family'])])
+                if len(i['tf_name']) != length:
+                    i['tf_name'] = length * i['tf_name']
+                if len(i['tf_class']) != length:
+                    i['tf_class'] = length * i['tf_class']
+                if len(i['tf_family']) != length:
+                    i['tf_family'] = length * i['tf_family']
+            container.append(i)
+        df = pd.DataFrame(container)
+        # end fix
+
+        df = df.explode(column=['tf_name', 'tf_class', 'tf_family'], ignore_index=True)
+        df = df.sort_values(by='adj.pval')
+    # end split
+
     print('-'*30)
     return df, taxon

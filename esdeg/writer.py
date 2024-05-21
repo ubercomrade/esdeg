@@ -7,7 +7,7 @@ import panel as pn
 from importlib import resources
 
 def write_table(df, path_to_output):
-    if 'jaspar_cluster' in df.index:
+    if 'jaspar_cluster' in df.columns:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
     else:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
@@ -18,7 +18,7 @@ def write_table(df, path_to_output):
 
 
 def write_table_ann(df, path_to_output):
-    if 'jaspar_cluster' in df.index:
+    if 'jaspar_cluster' in df.columns:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
     else:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
@@ -31,7 +31,7 @@ def write_table_ann(df, path_to_output):
 
 def write_xlsx(df, taxon, path_to_output):
 
-    if 'jaspar_cluster' in df.index:
+    if 'jaspar_cluster' in df.columns:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval']]
     else:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval']]
@@ -49,7 +49,7 @@ def write_xlsx(df, taxon, path_to_output):
     worksheet.set_default_row(27)
 
     image_row = 1
-    image_col = 8
+    image_col = len(df.columns)
     images = list(df.motif_id.map(lambda id: resources.files('esdeg').joinpath(f'logos/{taxon}/{id}.png')))
     for image in images:
         worksheet.insert_image(image_row,
@@ -78,7 +78,7 @@ def write_xlsx(df, taxon, path_to_output):
     # worksheet.set_column(4, 4, 13, cell_format_2)
     # worksheet.set_column(5, 5, 11, cell_format_2)
     # worksheet.set_column(6, 6, 14, cell_format_2)
-    worksheet.set_column(8, 8, 48)
+    worksheet.set_column(image_col, image_col, 48)
     worksheet.set_row_pixels(0, 18, cell_format)
     #worksheet.autofit()
     worksheet.write(0, image_col, 'logo', cell_format)
@@ -88,7 +88,7 @@ def write_xlsx(df, taxon, path_to_output):
 
 def write_xlsx_ann(df, path_to_output):
 
-    if 'jaspar_cluster' in df.index:
+    if 'jaspar_cluster' in df.columns:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj']]
     else:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj']]
@@ -160,7 +160,7 @@ def write_xlsx_ann(df, path_to_output):
 
 
 def write_report(df, taxon, path_to_output):
-    if 'jaspar_cluster' in df.index:
+    if 'jaspar_cluster' in df.columns:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]
     else:
         df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'log10(pval)', 'log10(adj.pval)', 'adj.pval', 'genes']]

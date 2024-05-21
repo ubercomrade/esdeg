@@ -383,7 +383,7 @@ def get_motif_to_cluster(cluster_path):
     clusters = pd.read_csv(cluster_path, sep='\t')
     motif_to_cluster = dict()
     for index, line in clusters.iterrows():
-        cluster_id = line[0]
+        cluster_id = line.iloc[0]
         for motif_id in line['motif_ids'].split(','):
             motif_to_cluster[motif_id] = cluster_id
     return motif_to_cluster

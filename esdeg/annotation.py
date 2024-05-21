@@ -22,29 +22,29 @@ def read_esdeg_table(esdeg_path):
     esdeg['tf_name'] = esdeg['tf_name'].str.upper()
     esdeg = esdeg.reset_index(drop=True)
 
-    #split dimers (JASPAR)
-    esdeg['tf_name'] = esdeg['tf_name'].str.split('::')
-    esdeg['tf_class'] = esdeg['tf_class'].str.split('::')
-    esdeg['tf_family'] = esdeg['tf_family'].str.split('::')
-
-    # fix number of Class and Family (reason is MA1628.2, JASPAR bug)
-    container = []
-    for index, i in esdeg.iterrows():
-        if len(i['tf_name']) != len(i['tf_class']) and len(i['tf_class']) != len(i['tf_family']):
-            length = np.max([len(i['tf_name']), len(i['tf_class']), len(i['tf_family'])])
-            if len(i['tf_name']) != length:
-                i['tf_name'] = length * i['tf_name']
-            if len(i['tf_class']) != length:
-                i['tf_class'] = length * i['tf_class']
-            if len(i['tf_family']) != length:
-                i['tf_family'] = length * i['tf_family']
-        container.append(i)
-    esdeg = pd.DataFrame(container)
-    # end fix
-
-    esdeg = esdeg.explode(column=['tf_name', 'tf_class', 'tf_family'], ignore_index=True)
-    esdeg = esdeg.sort_values(by='adj.pval')
-    # end split
+    # #split dimers (JASPAR)
+    # esdeg['tf_name'] = esdeg['tf_name'].str.split('::')
+    # esdeg['tf_class'] = esdeg['tf_class'].str.split('::')
+    # esdeg['tf_family'] = esdeg['tf_family'].str.split('::')
+    #
+    # # fix number of Class and Family (reason is MA1628.2, JASPAR bug)
+    # container = []
+    # for index, i in esdeg.iterrows():
+    #     if len(i['tf_name']) != len(i['tf_class']) and len(i['tf_class']) != len(i['tf_family']):
+    #         length = np.max([len(i['tf_name']), len(i['tf_class']), len(i['tf_family'])])
+    #         if len(i['tf_name']) != length:
+    #             i['tf_name'] = length * i['tf_name']
+    #         if len(i['tf_class']) != length:
+    #             i['tf_class'] = length * i['tf_class']
+    #         if len(i['tf_family']) != length:
+    #             i['tf_family'] = length * i['tf_family']
+    #     container.append(i)
+    # esdeg = pd.DataFrame(container)
+    # # end fix
+    #
+    # esdeg = esdeg.explode(column=['tf_name', 'tf_class', 'tf_family'], ignore_index=True)
+    # esdeg = esdeg.sort_values(by='adj.pval')
+    # # end split
 
     #esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
     #esdeg = esdeg.set_index(['tf_name'])
@@ -93,6 +93,11 @@ def annotation(deg_path, counts_path, esdeg_path, gtf_path, filter_flag=False, b
     esdeg = esdeg.sort_values(by='de_padj')
     if best_flag:
         esdeg = esdeg.drop_duplicates(subset=['tf_name'], keep='first')
-    esdeg = esdeg[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+
+    if 'jaspar_cluster' in esdeg.columns:
+        esdeg = esdeg[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+    else:
+        esdeg = esdeg[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'log2(or)', 'me_padj', 'counts', 'lfc', 'de_padj', 'genes']]
+        
     esdeg = esdeg.reset_index(drop=True)
     return esdeg
