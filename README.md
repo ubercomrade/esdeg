@@ -610,7 +610,7 @@ Where:
 
 **log(or)** - it's -log2 transformation of  odds ratio (OR). For the option `fraction` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is the number of foreground promoters with predicted sites and $N_b$ - is a mean value of number of background promoters with predicted sites estimated by Monte-Carlo approach. Alternatively for the option `enrichment` it can be defined as follow $OR = N_f / N_b$, where $N_f$ - is a number of predicted sites in foreground and $N_b$ - is the mean value of number of predicted sites in background estimated by Monte-Carlo approach. The best log(or) value is represented in table. It's chosen by minimal p-value.
 
-**log10(pval)** - it's log10(combined p-value). Combined p-value is calculated by Hartung method[^5].
+**log10(pval)** - it's log10(combined p-value). Combined p-value is calculated by  the Bonferroni method [^5].
 
 **log10(adj.pval)** - it's log10(adjusted p-value) obtained by using Benjamini-Hochberg FDR correction.
 
