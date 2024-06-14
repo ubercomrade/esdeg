@@ -46,7 +46,8 @@ def set_case(path_to_set, path_to_db,
                 'tf_class': tf_class,
                 'tf_family': tf_family}
         print(f'{index} {motif_id} - {tf_name}')
-        counts = np.load(f'{path_to_db}/{motif_id}.npy')
+        with np.load(f'{path_to_db}/{motif_id}.npz') as file:
+            counts = file['counts']
         foreground, foreground_gc, other, other_gc, genes = split_by_gene_ids(counts,
                                                                               gc_content,
                                                                               ids,

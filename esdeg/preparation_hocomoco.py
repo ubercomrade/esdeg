@@ -36,7 +36,7 @@ def worker(index, motif_data, promoters, output_dir):
     actual_fprs = threshold_table[:,1]
     number_of_uniq_fprs = len(np.unique(actual_fprs))
     counts = count_sites(scores, threshold_table)
-    np.save(f'{output_dir}/{motif_id}.npy', counts)
+    np.savez_compressed(f'{output_dir}/{motif_id}', counts=counts)
 
     motif_info = {
         'motif_id': motif_id,
