@@ -1,0 +1,30 @@
+[project]
+name = "esdeg"
+version = "0.1.0"
+description = ""
+authors = [
+    { name = "Anton Tsukanov", email = "tsukanov@bionet.nsc.ru" },
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy >=2.0,<3.0",
+    "torch >=2.7.0,<3.0.0",
+    "scipy >=1.14.1,<2.0.0",
+    "pandas >=2.2.3,<3.0.0",
+    "panel >=1.5.5,<2.0.0",
+    "plotly >=5.24.1,<6.0.0",
+    "xlsxwriter >=3.2.0,<4.0.0",
+    "pyjaspar >=3.0.0,<4.0.0",
+    "scikit-learn >=1.6.0,<2.0.0",
+    "tqdm >=4.67.1,<5.0.0",
+    "numba >=0.60,<1.0"
+]
+
+[project.scripts]
+esdeg = "esdeg.cli:main_cli"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

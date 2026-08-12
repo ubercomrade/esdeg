@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+esdeg/__init__.py
+esdeg/annotation.py
+esdeg/cli.py
+esdeg/functions.py
+esdeg/parsers.py
+esdeg/writers.py
+esdeg.egg-info/PKG-INFO
+esdeg.egg-info/SOURCES.txt
+esdeg.egg-info/dependency_links.txt
+esdeg.egg-info/entry_points.txt
+esdeg.egg-info/requires.txt
+esdeg.egg-info/top_level.txt
