@@ -1,875 +1,554 @@
-"""
-Motif enrichment analysis with GC-stratified permutation testing.
+"""Motif enrichment, GC matching, and permutation statistics."""
 
-This module provides functions for:
-1. GC-matched background selection from promoter sequences
-2. Stratified permutation testing for AUC significance
-3. Parallel processing of multiple motifs
-"""
+from __future__ import annotations
 
+import logging
 import os
-import sys
-import collections
-from typing import List, Dict, Tuple, Optional, Any
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
+from importlib import resources
 
+import mimosa
 import numpy as np
 import pandas as pd
-import scipy.stats as st
-import torch
-import torch.nn.functional as F
-from collections import defaultdict
-from sklearn.metrics import auc, precision_recall_curve, roc_auc_score
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from numba import njit
-from tqdm import tqdm
-from importlib import resources
-from esdeg.parsers import promoters_parser, read_motifs_from_db
+
+from esdeg.parsers import (
+    promoters_parser,
+    read_gene_set,
+    read_model_records,
+    read_motifs_from_db,
+    read_table,
+)
+
+logger = logging.getLogger(__name__)
+DEFAULT_BACKGROUND_LFC = np.log2(5 / 4)
 
 
-# ============================================================================
-# Core utility functions
-# ============================================================================
+def calculate_gc(sequences) -> np.ndarray:
+    """Return per-sequence GC fractions from Mimosa codes or DNA strings."""
+    if hasattr(sequences, "data") and hasattr(sequences, "offsets"):
+        data = np.asarray(sequences.data)
+        offsets = np.asarray(sequences.offsets)
+        lengths = np.diff(offsets)
+        if np.any(lengths == 0):
+            raise ValueError("GC content cannot be calculated for an empty sequence.")
+        gc = np.add.reduceat((data == 1) | (data == 2), offsets[:-1])
+        return gc.astype(np.float64) / lengths
 
-def calculate_gc(sequences: List[str]) -> np.ndarray:
-    """Calculate GC content for each sequence.
-
-    Args:
-        sequences: List of DNA sequences (strings).
-
-    Returns:
-        Array of GC content values (0.0 to 1.0).
-    """
-    gc = []
-    length = len(sequences[0])
-    for seq in sequences:
-        counter = collections.Counter(seq)
-        gc.append((counter['C'] + counter['G']) / length)
-    return np.array(gc)
-
-
-def seq_to_int(sequences: List[str], device: str = 'cuda') -> torch.Tensor:
-    """Convert DNA sequences to integer tensor.
-
-    Args:
-        sequences: List of DNA sequences.
-        device: Target device ('cuda' or 'cpu').
-
-    Returns:
-        Integer tensor of shape [num_sequences, sequence_length].
-    """
-    converter = {'A': 0, 'C': 1, 'G': 2, 'T': 3, 'N': 4}
-    return torch.stack([
-        torch.tensor([converter[c] for c in seq], dtype=torch.int64, device=device)
-        for seq in sequences
-    ])
+    strings = list(sequences)
+    if not strings or any(not sequence for sequence in strings):
+        raise ValueError("GC content requires at least one non-empty sequence.")
+    return np.asarray(
+        [sum(base in "CG" for base in sequence.upper()) / len(sequence) for sequence in strings],
+        dtype=np.float64,
+    )
 
 
-# ============================================================================
-# PWM scoring functions
-# ============================================================================
-
-def calculate_scores(
-    numeric_sequences: torch.Tensor,
-    models: torch.Tensor,
-    chunk_size: int = 64
-) -> torch.Tensor:
-    """Calculate PWM scores for sequences using convolution.
-
-    Args:
-        numeric_sequences: Integer tensor [batch, length].
-        models: PWM models [num_models, 5, motif_len].
-        chunk_size: Batch size for processing.
-
-    Returns:
-        Score tensor [batch, num_models].
-    """
-    device = numeric_sequences.device
-    B, L = numeric_sequences.shape
-    M, C, motif_len = models.shape
-
-    # Precompute reverse complement models
-    rc_models = models[:, [3, 2, 1, 0, 4]].flip(-1)
-    all_models = torch.cat([models, rc_models], dim=0)
-
-    result = torch.zeros((B, M), device=device)
-
-    # Process in chunks to manage memory
-    for i in range(0, B, chunk_size):
-        chunk_end = min(i + chunk_size, B)
-        chunk = numeric_sequences[i:chunk_end]
-
-        # One-hot encode
-        one_hot = F.one_hot(chunk, 5).float().permute(0, 2, 1)
-
-        # Convolve with all models (forward + reverse)
-        all_scores = F.conv1d(one_hot, all_models)
-
-        # Split and take best orientation
-        forward_scores, rc_scores = all_scores.chunk(2, dim=1)
-        best_scores = torch.maximum(forward_scores, rc_scores)
-        chunk_result = torch.max(best_scores, dim=-1)[0]
-
-        result[i:chunk_end] = chunk_result
-
-    return result
+def _validate_gc(values, name: str) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float64)
+    if values.ndim != 1 or values.size == 0:
+        raise ValueError(f"{name} must be a non-empty one-dimensional array.")
+    if not np.all(np.isfinite(values)) or np.any((values < 0) | (values > 1)):
+        raise ValueError(f"{name} must contain finite values in [0, 1].")
+    return values
 
 
-def process_all_models(
-    numeric_sequences: torch.Tensor,
-    sorted_models: List[Dict[str, Any]],
-    chunk_size: int = 64
-) -> torch.Tensor:
-    """Process all PWM models grouped by length.
+def _largest_remainder(counts: np.ndarray, total: int) -> np.ndarray:
+    ideal = total * counts / counts.sum()
+    quota = np.floor(ideal).astype(np.int64)
+    remainder = total - int(quota.sum())
+    if remainder:
+        order = np.argsort(-(ideal - quota), kind="stable")
+        quota[order[:remainder]] += 1
+    return quota
 
-    Args:
-        numeric_sequences: Sequences as integer tensor [batch, length].
-        sorted_models: List of model dictionaries with 'length' and 'pwm'.
-        chunk_size: Batch size for scoring.
-
-    Returns:
-        Score tensor [batch, num_models].
-    """
-    device = numeric_sequences.device
-    B = numeric_sequences.shape[0]
-
-    # Group models by motif length for efficient processing
-    length_groups = defaultdict(list)
-    for orig_idx, model in enumerate(sorted_models):
-        length = model['length']
-        length_groups[length].append((orig_idx, model['pwm']))
-
-    total_models = len(sorted_models)
-    all_scores = torch.zeros((B, total_models), device=device)
-
-    # Process each length group
-    for length, models_group in length_groups.items():
-        orig_indices = [idx for idx, _ in models_group]
-        pwms = [pwm for _, pwm in models_group]
-
-        models_tensor = torch.stack([
-            torch.from_numpy(pwm).to(dtype=torch.float32)
-            for pwm in pwms
-        ]).to(device)
-
-        group_scores = calculate_scores(numeric_sequences, models_tensor, chunk_size)
-        all_scores[:, orig_indices] = group_scores
-
-    return all_scores
-
-
-# ============================================================================
-# GC-matched background selection
-# ============================================================================
 
 def select_gc_matched_background(
     foreground_gc: np.ndarray,
     background_gc: np.ndarray,
-    match_ratio: int = 10,
-    n_quantiles: int = 10,
-    random_state: Optional[int] = None
+    match_ratio: int = 5,
+    random_state: int | None = None,
 ) -> np.ndarray:
-    """Select background samples matched to foreground GC distribution.
+    """Select a unique background pool with a robust foreground GC match."""
+    foreground_gc = _validate_gc(foreground_gc, "foreground_gc")
+    background_gc = _validate_gc(background_gc, "background_gc")
+    if isinstance(match_ratio, bool) or not isinstance(match_ratio, (int, np.integer)):
+        raise ValueError("match_ratio must be a positive integer.")
+    if match_ratio <= 0:
+        raise ValueError("match_ratio must be a positive integer.")
 
-    Args:
-        foreground_gc: GC content array for foreground [n_foreground].
-        background_gc: GC content array for background pool [n_background].
-        match_ratio: Ratio of background to foreground samples.
-        n_quantiles: Number of GC quantiles for stratification.
-        random_state: Random seed for reproducibility.
+    target = min(background_gc.size, int(match_ratio) * foreground_gc.size)
+    n_bins = max(1, min(10, foreground_gc.size // 50))
+    quantiles = np.quantile(foreground_gc, np.linspace(0, 1, n_bins + 1))
+    inner_edges = np.unique(quantiles[1:-1])
+    foreground_bins = np.searchsorted(inner_edges, foreground_gc, side="right")
+    background_bins = np.searchsorted(inner_edges, background_gc, side="right")
+    n_bins = len(inner_edges) + 1
 
-    Returns:
-        Indices of selected background samples.
-    """
-    if random_state is not None:
-        np.random.seed(random_state)
+    counts = np.bincount(foreground_bins, minlength=n_bins)
+    quota = _largest_remainder(counts, target)
+    rng = np.random.default_rng(random_state)
+    selected: list[int] = []
+    available = np.ones(background_gc.size, dtype=bool)
 
-    n_foreground = len(foreground_gc)
-    n_quantiles = min(n_quantiles, n_foreground // 50)  # At least 50 per quantile
-
-    # Define GC quantiles from foreground
-    fg_quantiles = np.percentile(
-        foreground_gc,
-        np.linspace(0, 100, n_quantiles + 1)
-    )
-
-    selected_indices = []
-
-    for i in range(n_quantiles):
-        gc_low = fg_quantiles[i]
-        gc_high = fg_quantiles[i + 1]
-
-        # Count foreground in this quantile
-        fg_mask = (foreground_gc >= gc_low) & (foreground_gc < gc_high)
-        fg_count = np.sum(fg_mask)
-
-        if fg_count == 0:
+    for bin_index, needed in enumerate(quota):
+        if needed == 0:
             continue
+        local = np.flatnonzero(available & (background_bins == bin_index))
+        take = min(int(needed), local.size)
+        if take:
+            chosen = rng.choice(local, size=take, replace=False)
+            selected.extend(int(index) for index in chosen)
+            available[chosen] = False
 
-        # Find background in same GC range
-        bg_mask = (background_gc >= gc_low) & (background_gc < gc_high)
-        bg_indices_in_range = np.where(bg_mask)[0]
-
-        bg_count_needed = fg_count * match_ratio
-
-        # Handle edge cases
-        if len(bg_indices_in_range) == 0:
-            # No background in range, use nearest
-            distances = np.abs(background_gc - np.mean([gc_low, gc_high]))
-            bg_indices_in_range = np.argsort(distances)[:bg_count_needed]
-
-        # Sample with or without replacement
-        if len(bg_indices_in_range) >= bg_count_needed:
-            selected = np.random.choice(
-                bg_indices_in_range,
-                size=bg_count_needed,
-                replace=False
+        deficit = int(needed) - take
+        if deficit:
+            foreground_in_bin = foreground_gc[foreground_bins == bin_index]
+            center = (
+                float(foreground_in_bin.mean())
+                if foreground_in_bin.size
+                else float(background_gc.mean())
             )
-        else:
-            selected = np.random.choice(
-                bg_indices_in_range,
-                size=bg_count_needed,
-                replace=True
-            )
+            candidates = np.flatnonzero(available)
+            order = np.argsort(np.abs(background_gc[candidates] - center), kind="stable")
+            chosen = candidates[order[:deficit]]
+            selected.extend(int(index) for index in chosen)
+            available[chosen] = False
 
-        selected_indices.extend(selected)
+    result = np.asarray(selected, dtype=np.int32)
+    if result.size != target or np.unique(result).size != result.size:
+        raise ValueError("Could not select a unique GC-matched background pool.")
+    logger.info(
+        "GC-matched background: n=%d, foreground_gc=%.4f, background_gc=%.4f, bins=%d",
+        result.size,
+        foreground_gc.mean(),
+        background_gc[result].mean(),
+        n_bins,
+    )
+    return result
 
-    return np.array(selected_indices, dtype=np.int32)
 
-
-# ============================================================================
-# Stratified permutation test
-# ============================================================================
-
-
-@dataclass
+@dataclass(frozen=True)
 class PermutationResult:
-    """Results from permutation test."""
     auc_roc: float
     auc_prc: float
     p_value_roc: float
     p_value_prc: float
 
 
-@njit
+@njit(cache=True)
 def precision_recall_curve(classification, scores):
-    """Compute precision-recall curve (JIT-compiled)."""
+    """Prevalence-adjusted precision-recall curve used by ESDEG."""
     if len(scores) == 0:
         return np.array([1.0]), np.array([0.0]), np.array([np.inf])
-
-    # Получаем индексы сортировки оценок по убыванию
     indexes = np.argsort(scores)[::-1]
     sorted_scores = scores[indexes]
     sorted_classification = classification[indexes]
-
-    # Инициализируем массивы (с запасом +1 для начальной точки)
-    number_of_uniq_scores = np.unique(scores).shape[0]
-    max_size = number_of_uniq_scores + 1
-
+    max_size = np.unique(scores).shape[0] + 1
     precision = np.zeros(max_size)
     recall = np.zeros(max_size)
-    uniq_scores = np.zeros(max_size)
-
-    # Начальная точка: (recall=0, precision=1, threshold=inf)
+    thresholds = np.zeros(max_size)
     precision[0] = 1.0
-    recall[0] = 0.0
-    uniq_scores[0] = np.inf  # ← ИСПРАВЛЕНИЕ: было sorted_scores[0]
+    thresholds[0] = np.inf
 
-    TP, FP = 0, 0
-    number_of_true = np.sum(classification == 1)
-    number_of_false = np.sum(classification == 0)
-
-    if number_of_false == 0:
-        true_false_ratio = 1.0
-    else:
-        true_false_ratio = number_of_true / number_of_false
-
+    true_count = np.sum(classification == 1)
+    false_count = np.sum(classification == 0)
+    true_false_ratio = 1.0 if false_count == 0 else true_count / false_count
+    true_positive = 0
+    false_positive = 0
     position = 1
     score = sorted_scores[0]
-
-    for i in range(len(scores)):
-        _score = sorted_scores[i]
-        _flag = sorted_classification[i]
-
-        # Обновляем TP и FP
-        if _flag == 1:
-            TP += 1
+    for index in range(len(scores)):
+        if sorted_classification[index] == 1:
+            true_positive += 1
         else:
-            FP += 1
-
-        # Проверяем, изменилась ли оценка
-        if i == len(scores) - 1 or score != sorted_scores[i + 1]:
-            uniq_scores[position] = _score
-
-            if TP + FP > 0:
-                precision[position] = TP / (TP + true_false_ratio * FP)
-            else:
-                precision[position] = 1.0
-
-            if number_of_true > 0:
-                recall[position] = TP / number_of_true
-            else:
-                recall[position] = 0.0
-
+            false_positive += 1
+        if index == len(scores) - 1 or score != sorted_scores[index + 1]:
+            thresholds[position] = sorted_scores[index]
+            precision[position] = true_positive / (
+                true_positive + true_false_ratio * false_positive
+            )
+            recall[position] = 0.0 if true_count == 0 else true_positive / true_count
             position += 1
-            if i < len(scores) - 1:
-                score = sorted_scores[i + 1]
+            if index < len(scores) - 1:
+                score = sorted_scores[index + 1]
+    return precision[:position], recall[:position], thresholds[:position]
 
-    return precision[:position], recall[:position], uniq_scores[:position]
 
-
-@njit
+@njit(cache=True)
 def roc_curve(classification, scores):
-    """Compute ROC curve (JIT-compiled)."""
+    """ROC curve with score ties aggregated before integration."""
     if len(scores) == 0:
         return np.array([0.0]), np.array([0.0]), np.array([np.inf])
-
-    # Получаем индексы сортировки оценок по убыванию
     indexes = np.argsort(scores)[::-1]
     sorted_scores = scores[indexes]
     sorted_classification = classification[indexes]
-
-    # Инициализируем массивы
-    number_of_uniq_scores = np.unique(scores).shape[0]
-    max_size = number_of_uniq_scores + 1
-
+    max_size = np.unique(scores).shape[0] + 1
     tpr = np.zeros(max_size)
     fpr = np.zeros(max_size)
-    uniq_scores = np.zeros(max_size)
-
-    # Начальная точка: (fpr=0, tpr=0, threshold=inf)
-    tpr[0] = 0.0
-    fpr[0] = 0.0
-    uniq_scores[0] = np.inf
-
-    TP, FP = 0, 0
-    number_of_true = np.sum(classification == 1)
-    number_of_false = np.sum(classification == 0)
+    thresholds = np.zeros(max_size)
+    thresholds[0] = np.inf
+    true_count = np.sum(classification == 1)
+    false_count = np.sum(classification == 0)
+    true_positive = 0
+    false_positive = 0
     position = 1
     score = sorted_scores[0]
-
-    for i in range(len(scores)):
-        _score = sorted_scores[i]
-        _flag = sorted_classification[i]
-
-        # Обновляем TP и FP
-        if _flag == 1:
-            TP += 1
+    for index in range(len(scores)):
+        if sorted_classification[index] == 1:
+            true_positive += 1
         else:
-            FP += 1
-
-        # Проверяем, изменилась ли оценка
-        if i == len(scores) - 1 or score != sorted_scores[i + 1]:
-            uniq_scores[position] = _score
-
-            if number_of_true > 0:
-                tpr[position] = TP / number_of_true
-            else:
-                tpr[position] = 0.0
-
-            if number_of_false > 0:
-                fpr[position] = FP / number_of_false
-            else:
-                fpr[position] = 0.0
-
+            false_positive += 1
+        if index == len(scores) - 1 or score != sorted_scores[index + 1]:
+            thresholds[position] = sorted_scores[index]
+            tpr[position] = 0.0 if true_count == 0 else true_positive / true_count
+            fpr[position] = 0.0 if false_count == 0 else false_positive / false_count
             position += 1
-            if i < len(scores) - 1:
-                score = sorted_scores[i + 1]
+            if index < len(scores) - 1:
+                score = sorted_scores[index + 1]
+    return tpr[:position], fpr[:position], thresholds[:position]
 
-    return tpr[:position], fpr[:position], uniq_scores[:position]
 
-
-@njit
+@njit(cache=True)
 def compute_aucs(classification, scores):
-    """Compute both ROC AUC and PRC AUC for given labels and scores.
-
-    Args:
-        classification: Binary labels (0 or 1).
-        scores: Predicted scores.
-
-    Returns:
-        Tuple of (auc_roc, auc_prc).
-    """
-    # Compute ROC curve and AUC
+    """Return ROC AUC and ESDEG's prevalence-adjusted PR AUC."""
     tpr, fpr, _ = roc_curve(classification, scores)
-    # Правильный порядок - np.trapz(y, x)
-    # Для ROC: y=TPR (ось Y), x=FPR (ось X)
-    auc_roc = np.trapz(tpr, x=fpr)
-
-    # Compute PR curve and AUC
+    auc_roc = np.trapezoid(tpr, x=fpr)
     precision, recall, _ = precision_recall_curve(classification, scores)
-    # Правильный порядок - np.trapz(y, x)
-    # Для PRC: y=Precision (ось Y), x=Recall (ось X)
-    auc_prc = np.trapz(precision, x=recall)
-
+    auc_prc = np.trapezoid(precision, x=recall)
     return auc_roc, auc_prc
 
 
-@njit
-def permutation_loop(
-    all_labels: np.ndarray,
-    all_scores: np.ndarray,
-    n_permutations: int
-) -> tuple:
-    """JIT-compiled permutation loop for maximum speed.
-
-    Args:
-        all_labels: Binary labels for all samples.
-        all_scores: Scores for all samples.
-        n_permutations: Number of permutations to perform.
-
-    Returns:
-        Tuple of (permuted_auc_roc, permuted_auc_prc) arrays.
-    """
+@njit(cache=True)
+def permutation_loop(all_labels, all_scores, n_permutations, seed):
+    """Run an upper-tail permutation loop with a private Numba RNG seed."""
+    np.random.seed(seed)
     n_samples = len(all_labels)
     permuted_auc_roc = np.empty(n_permutations, dtype=np.float32)
     permuted_auc_prc = np.empty(n_permutations, dtype=np.float32)
-
-    # Copy labels for shuffling
     shuffled_labels = all_labels.copy()
-
-    for i in range(n_permutations):
-        # In-place shuffle using Fisher-Yates algorithm
-        for j in range(n_samples - 1, 0, -1):
-            k = np.random.randint(0, j + 1)
-            shuffled_labels[j], shuffled_labels[k] = shuffled_labels[k], shuffled_labels[j]
-
-        # Compute both AUCs
+    for permutation in range(n_permutations):
+        for index in range(n_samples - 1, 0, -1):
+            swap = np.random.randint(0, index + 1)
+            shuffled_labels[index], shuffled_labels[swap] = (
+                shuffled_labels[swap],
+                shuffled_labels[index],
+            )
         auc_roc, auc_prc = compute_aucs(shuffled_labels, all_scores)
-        permuted_auc_roc[i] = auc_roc
-        permuted_auc_prc[i] = auc_prc
-
+        permuted_auc_roc[permutation] = auc_roc
+        permuted_auc_prc[permutation] = auc_prc
     return permuted_auc_roc, permuted_auc_prc
 
 
 def permutation_test(
     foreground_scores: np.ndarray,
     background_scores: np.ndarray,
-    n_permutations: int = 5000,
-    random_state: Optional[int] = None
+    n_permutations: int = 10000,
+    seed: int = 0,
+    random_state: int | None = None,
 ) -> PermutationResult:
-    """Perform permutation test computing both ROC AUC and PRC AUC.
-
-    Optimized for speed using Numba JIT compilation. Use this function
-    when background is already GC-matched to foreground (no stratification needed).
-
-    Args:
-        foreground_scores: Motif scores for foreground samples (positives).
-        background_scores: Motif scores for background samples (negatives).
-        n_permutations: Number of permutations for testing (default 5000).
-        random_state: Random seed for reproducibility.
-
-    Returns:
-        PermutationResult with observed AUCs, p-values, and permutation means.
-
-    Example:
-        >>> fg = np.array([0.8, 0.9, 0.7, 0.85])
-        >>> bg = np.array([0.3, 0.4, 0.5, 0.35, 0.45])
-        >>> result = permutation_test(fg, bg, n_permutations=1000)
-        >>> print(f"AUC ROC: {result.auc_roc:.3f}, p={result.p_value_roc:.4f}")
-    """
+    """Calculate AUCs and one-sided upper-tail permutation p-values."""
     if random_state is not None:
-        np.random.seed(random_state)
+        seed = random_state
+    if isinstance(n_permutations, bool) or n_permutations < 1:
+        raise ValueError("n_permutations must be at least 1.")
+    foreground_scores = np.asarray(foreground_scores, dtype=np.float64)
+    background_scores = np.asarray(background_scores, dtype=np.float64)
+    if foreground_scores.ndim != 1 or background_scores.ndim != 1:
+        raise ValueError("foreground_scores and background_scores must be one-dimensional.")
+    if not foreground_scores.size or not background_scores.size:
+        raise ValueError("foreground and background groups must both be non-empty.")
+    if not np.all(np.isfinite(foreground_scores)) or not np.all(np.isfinite(background_scores)):
+        raise ValueError("scores must be finite.")
+    if not isinstance(seed, (int, np.integer)) or seed < 0:
+        raise ValueError("seed must be a non-negative integer.")
 
-    # Combine and prepare data
-    all_scores = np.concatenate([foreground_scores, background_scores])
-    all_labels = np.concatenate([
-        np.ones(len(foreground_scores), dtype=np.float64),
-        np.zeros(len(background_scores), dtype=np.float64)
-    ])
-
-    # Compute observed AUCs
-    observed_auc_roc, observed_auc_prc = compute_aucs(all_labels, all_scores)
-
-    # Run permutation test (JIT-compiled loop)
-    permuted_auc_roc, permuted_auc_prc = permutation_loop(
-        all_labels, all_scores, n_permutations
+    all_scores = np.concatenate((foreground_scores, background_scores))
+    all_labels = np.concatenate(
+        (
+            np.ones(foreground_scores.size, dtype=np.float64),
+            np.zeros(background_scores.size, dtype=np.float64),
+        )
     )
-
-    # Calculate p-values
-    count_roc = np.sum(permuted_auc_roc >= observed_auc_roc)
-    p_value_roc = (count_roc + 1) / (n_permutations + 1)
-
-    count_prc = np.sum(permuted_auc_prc >= observed_auc_prc)
-    p_value_prc = (count_prc + 1) / (n_permutations + 1)
-
+    observed_auc_roc, observed_auc_prc = compute_aucs(all_labels, all_scores)
+    permuted_auc_roc, permuted_auc_prc = permutation_loop(
+        all_labels, all_scores, int(n_permutations), int(seed) % (2**32)
+    )
     return PermutationResult(
         auc_roc=float(observed_auc_roc),
         auc_prc=float(observed_auc_prc),
-        p_value_roc=float(p_value_roc),
-        p_value_prc=float(p_value_prc),
+        p_value_roc=float(
+            (np.count_nonzero(permuted_auc_roc >= observed_auc_roc) + 1) / (n_permutations + 1)
+        ),
+        p_value_prc=float(
+            (np.count_nonzero(permuted_auc_prc >= observed_auc_prc) + 1) / (n_permutations + 1)
+        ),
     )
 
 
-
-# ============================================================================
-# Parallel processing
-# ============================================================================
-
-def process_single_motif(args: Tuple) -> Dict[str, Any]:
-    """Process a single motif with permutation test.
-
-    Args:
-        args: Tuple of (motif_data, foreground, background, fg_gc, bg_gc, n_perm).
-
-    Returns:
-        Dictionary with motif info and test results.
-    """
-    motif_data, foreground, background, fg_gc, bg_gc, n_perm = args
-
-
-    result = permutation_test(
-        foreground_scores=foreground,
-        background_scores=background,
-        n_permutations=n_perm
-    )
-
-
+def process_single_motif(args) -> dict:
+    motif_data, foreground, background, n_permutations, seed = args
+    motif_id = motif_data["motif_id"]
+    try:
+        result = permutation_test(foreground, background, n_permutations, seed=seed)
+    except Exception as exc:
+        raise RuntimeError(f"Permutation failed for motif_id {motif_id}: {exc}") from exc
     return {
-        'motif_id': motif_data['motif_id'],
-        'tf_name': motif_data['tf_name'],
-        'tf_class': motif_data['tf_class'],
-        'tf_family': motif_data['tf_family'],
-        'auc_roc': result.auc_roc,
-        'auc_prc': result.auc_prc,
-        'p_value_roc': result.p_value_roc,
-        'p_value_prc': result.p_value_prc,
+        "motif_id": motif_id,
+        "tf_name": motif_data["tf_name"],
+        "tf_class": motif_data["tf_class"],
+        "tf_family": motif_data["tf_family"],
+        "auc_roc": result.auc_roc,
+        "auc_prc": result.auc_prc,
+        "p_value_roc": result.p_value_roc,
+        "p_value_prc": result.p_value_prc,
     }
 
 
 def parallel_permutation_runner(
-    motifs: List[Dict],
+    motifs: list[dict],
     foreground_scores: np.ndarray,
     background_scores: np.ndarray,
-    foreground_gc: np.ndarray,
-    background_gc: np.ndarray,
     n_permutations: int = 10000,
-    n_workers: int = 4
-) -> List[Dict]:
-    """Run permutation tests in parallel for multiple motifs.
-
-    Args:
-        motifs: List of motif dictionaries.
-        foreground_scores: Score matrix [n_foreground, n_motifs].
-        background_scores: Score matrix [n_background, n_motifs].
-        foreground_gc: GC content for foreground.
-        background_gc: GC content for background.
-        n_permutations: Number of permutations per motif.
-        n_workers: Number of parallel workers.
-
-    Returns:
-        List of result dictionaries.
-    """
+    n_workers: int = 1,
+    seeds: list[int] | None = None,
+) -> list[dict]:
+    """Run one independently seeded permutation stream per motif."""
+    if isinstance(n_workers, bool) or n_workers < 1:
+        raise ValueError("nproc must be at least 1.")
+    if n_permutations < 1:
+        raise ValueError("n_permutations must be at least 1.")
+    if foreground_scores.ndim != 2 or background_scores.ndim != 2:
+        raise ValueError("score matrices must be two-dimensional.")
+    if foreground_scores.shape[1] != len(motifs) or background_scores.shape[1] != len(motifs):
+        raise ValueError("score matrix columns must match motif count.")
+    if seeds is None:
+        seeds = list(range(len(motifs)))
+    if len(seeds) != len(motifs):
+        raise ValueError("one RNG seed is required per motif.")
     if not motifs:
         return []
 
-    n_workers = min(n_workers, os.cpu_count() or 4)
-
-    # Prepare arguments for each motif
-    args_list = [
+    args = [
         (
             motif,
-            foreground_scores[:, idx],
-            background_scores[:, idx],
-            foreground_gc,
-            background_gc,
-            n_permutations
+            foreground_scores[:, index],
+            background_scores[:, index],
+            n_permutations,
+            seeds[index],
         )
-        for idx, motif in enumerate(motifs)
+        for index, motif in enumerate(motifs)
     ]
+    workers = min(int(n_workers), os.cpu_count() or 1, len(args))
+    if workers == 1:
+        return [process_single_motif(item) for item in args]
 
     results = []
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
-        futures = [executor.submit(process_single_motif, arg) for arg in args_list]
-
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing motifs"):
-            result = future.result()
-            if result is not None:
-                results.append(result)
-
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(process_single_motif, item): item[0]["motif_id"] for item in args
+        }
+        try:
+            for future in as_completed(futures):
+                results.append(future.result())
+        except Exception as exc:
+            for future in futures:
+                future.cancel()
+            motif_id = futures.get(future, "unknown")
+            if "motif_id" in str(exc):
+                raise
+            raise RuntimeError(f"Permutation failed for motif_id {motif_id}: {exc}") from exc
     return results
 
 
-# ============================================================================
-# Gene ID utilities
-# ============================================================================
-
-def get_deg_gene_ids(
-    df: pd.DataFrame,
-    condition: str = 'all',
-    padj_threshold: float = 0.05,
-    log2fc_threshold: float = 1.0
-) -> np.ndarray:
-    """Extract differentially expressed gene IDs.
-
-    Args:
-        df: DESeq2 results DataFrame.
-        condition: 'all', 'up', or 'down'.
-        padj_threshold: Adjusted p-value cutoff.
-        log2fc_threshold: Log2 fold-change cutoff (absolute value).
-
-    Returns:
-        Array of unique gene IDs.
-    """
-    log2fc_threshold = abs(log2fc_threshold)
-
-    if condition == 'all':
-        df = df[
-            (df['log2FoldChange'] <= -log2fc_threshold) |
-            (df['log2FoldChange'] >= log2fc_threshold)
-        ]
-    elif condition == 'down':
-        df = df[df['log2FoldChange'] <= -log2fc_threshold]
-    elif condition == 'up':
-        df = df[df['log2FoldChange'] >= log2fc_threshold]
-
-    df = df[df['padj'] <= padj_threshold]
-    gene_ids = np.array([i for i in df['id'] if isinstance(i, str)])
-    return np.unique(gene_ids)
+def _validate_deg_table(df: pd.DataFrame) -> pd.DataFrame:
+    required = {"id", "log2FoldChange", "padj"}
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(f"DEG table is missing required columns: {', '.join(missing)}.")
+    result = df.copy()
+    for column in ("log2FoldChange", "padj"):
+        numeric = pd.to_numeric(result[column], errors="coerce")
+        invalid = result[column].notna() & numeric.isna()
+        if invalid.any():
+            raise ValueError(f"DEG column {column!r} contains non-numeric values.")
+        result[column] = numeric
+    dropped = int(result["padj"].isna().sum())
+    if dropped:
+        logger.warning("Ignoring %d DEG rows with NaN padj.", dropped)
+    return result[result["padj"].notna()].copy()
 
 
-def get_background_gene_ids(
-    df: pd.DataFrame,
-    padj_threshold: float = 0.05,
-    log2fc_threshold: float = np.log2(5/4)
-) -> np.ndarray:
-    """Extract non-DEG gene IDs for background.
+def get_deg_gene_ids(df, condition="all", padj_threshold=0.05, log2fc_threshold=1.0):
+    if condition not in {"all", "up", "down"}:
+        raise ValueError("condition must be one of: all, up, down.")
+    log2fc_threshold = abs(float(log2fc_threshold))
+    significant = df[df["padj"] <= padj_threshold]
+    if condition == "up":
+        significant = significant[significant["log2FoldChange"] >= log2fc_threshold]
+    elif condition == "down":
+        significant = significant[significant["log2FoldChange"] <= -log2fc_threshold]
+    else:
+        significant = significant[significant["log2FoldChange"].abs() >= log2fc_threshold]
+    return pd.unique(significant.loc[significant["id"].notna(), "id"].astype(str)).astype(object)
 
-    Args:
-        df: DESeq2 results DataFrame.
-        padj_threshold: Adjusted p-value cutoff.
-        log2fc_threshold: Log2 fold-change cutoff.
 
-    Returns:
-        Array of background gene IDs.
-    """
-    log2fc_threshold = abs(log2fc_threshold)
-    df = df[
-        (df['log2FoldChange'] >= -log2fc_threshold) &
-        (df['log2FoldChange'] <= log2fc_threshold) &
-        (df['padj'] > padj_threshold)
+def get_background_gene_ids(df, padj_threshold=0.05, log2fc_threshold=DEFAULT_BACKGROUND_LFC):
+    threshold = abs(float(log2fc_threshold))
+    background = df[
+        (df["log2FoldChange"] >= -threshold)
+        & (df["log2FoldChange"] <= threshold)
+        & (df["padj"] > padj_threshold)
     ]
-    gene_ids = np.array([i for i in df['id'] if isinstance(i, str)])
-    return np.unique(gene_ids)
-
-
-def read_gene_set(path: str) -> np.ndarray:
-    """Read gene IDs from file.
-
-    Args:
-        path: Path to file with gene IDs (one per line).
-
-    Returns:
-        Array of unique gene IDs.
-    """
-    with open(path) as file:
-        gene_ids = [line.strip() for line in file]
-    return np.array(list(set(gene_ids)))
+    return pd.unique(background.loc[background["id"].notna(), "id"].astype(str)).astype(object)
 
 
 def get_indexes(all_ids: np.ndarray, sub_ids: np.ndarray) -> np.ndarray:
-    """Get indices of sub_ids in all_ids.
-
-    Args:
-        all_ids: Array of all IDs.
-        sub_ids: Array of subset IDs.
-
-    Returns:
-        Indices where sub_ids appear in all_ids.
-    """
-    _, indices, _ = np.intersect1d(all_ids, sub_ids, assume_unique=False, return_indices=True)
-    return indices
+    wanted = set(map(str, sub_ids))
+    return np.asarray(
+        [index for index, value in enumerate(all_ids) if str(value) in wanted], dtype=np.int32
+    )
 
 
-def get_motif_to_cluster(cluster_path: str) -> Dict[str, str]:
-    """Load motif-to-cluster mapping.
-
-    Args:
-        cluster_path: Path to cluster TSV file.
-
-    Returns:
-        Dictionary mapping motif_id to cluster_id.
-    """
-    clusters = pd.read_csv(cluster_path, sep='\t')
-    motif_to_cluster = {}
+def get_motif_to_cluster(cluster_path: str) -> dict[str, str]:
+    clusters = pd.read_csv(cluster_path, sep="\t")
+    if "motif_ids" not in clusters.columns:
+        raise ValueError("Cluster table must contain a motif_ids column.")
+    mapping = {}
     for _, row in clusters.iterrows():
-        cluster_id = row.iloc[0]
-        for motif_id in row['motif_ids'].split(','):
-            motif_to_cluster[motif_id] = cluster_id
-    return motif_to_cluster
+        for motif_id in str(row["motif_ids"]).split(","):
+            mapping[motif_id.strip()] = str(row.iloc[0])
+    return mapping
 
 
-# ============================================================================
-# Main pipeline
-# ============================================================================
+def _adjust_pvalues(pvalues) -> np.ndarray:
+    pvalues = np.asarray(pvalues, dtype=np.float64)
+    if not pvalues.size:
+        return pvalues
+    order = np.argsort(pvalues, kind="stable")
+    adjusted = np.minimum.accumulate(
+        (pvalues[order] * pvalues.size / np.arange(1, pvalues.size + 1))[::-1]
+    )[::-1]
+    result = np.empty_like(adjusted)
+    result[order] = np.minimum(adjusted, 1.0)
+    return result
+
+
+def process_all_models(sequences, motifs) -> np.ndarray:
+    """Scan all motif records and return one maximum score per sequence."""
+    scores = np.empty((len(sequences), len(motifs)), dtype=np.float32)
+    for motif_index, record in enumerate(motifs):
+        track = mimosa.scan(record["model"], sequences, strands="best")
+        row_lengths = np.diff(track.offsets)
+        if np.any(row_lengths == 0):
+            raise ValueError(
+                f"Mimosa returned an empty score row for motif_id {record['motif_id']}."
+            )
+        scores[:, motif_index] = np.maximum.reduceat(track.data, track.offsets[:-1])
+    return scores
+
 
 def esdeg(
-    motif_db: str,
-    taxon: str,
-    gc_threshold: float,
-    path_to_promoters: str,
-    path_to_data: str,
-    nproc: int,
-    type_of_data: str = 'deg',
-    condition: str = 'all',
+    motif_db: str = "hocomoco",
+    taxon: str = "human",
+    path_to_promoters: str | None = None,
+    path_to_data: str | None = None,
+    nproc: int = 4,
+    type_of_data: str = "deg",
+    condition: str = "all",
     log2fc_thr_deg: float = 1.0,
-    log2fc_thr_background: float = np.log2(5/4),
+    log2fc_thr_background: float = np.log2(5 / 4),
     padj_thr: float = 0.05,
-    n_permutations: int = 1000,
-    match_ratio: int = 5
+    n_permutations: int = 10000,
+    match_ratio: int = 5,
+    seed: int = 0,
+    model_paths=None,
 ) -> pd.DataFrame:
-    """Main enrichment analysis pipeline with stratified permutation testing.
+    """Run motif enrichment on a DEG table or a gene set."""
+    if path_to_promoters is None or path_to_data is None:
+        raise ValueError("path_to_promoters and path_to_data are required.")
+    if nproc < 1:
+        raise ValueError("nproc must be at least 1.")
+    if n_permutations < 1:
+        raise ValueError("n_permutations must be at least 1.")
+    if not isinstance(seed, (int, np.integer)) or seed < 0:
+        raise ValueError("seed must be a non-negative integer.")
+    if type_of_data not in {"deg", "set"}:
+        raise ValueError("type_of_data must be 'deg' or 'set'.")
+    if condition not in {"all", "up", "down"}:
+        raise ValueError("condition must be one of: all, up, down.")
 
-    Args:
-        motif_db: Database name ('jaspar' or 'hocomoco').
-        taxon: Organism taxon.
-        gc_threshold: GC matching threshold (deprecated, kept for compatibility).
-        path_to_promoters: Path to promoter FASTA file.
-        path_to_data: Path to DEG table or gene set file.
-        nproc: Number of parallel processes.
-        type_of_data: 'deg' or 'set'.
-        condition: DEG condition ('all', 'up', 'down').
-        log2fc_thr_deg: Log2FC threshold for DEGs.
-        log2fc_thr_background: Log2FC threshold for background.
-        padj_thr: Adjusted p-value threshold.
-        n_permutations: Number of permutations for testing.
-        match_ratio: Ratio of background to foreground samples.
+    sequences, ids = promoters_parser(path_to_promoters)
+    motifs = (
+        read_model_records(model_paths) if model_paths else read_motifs_from_db(motif_db, taxon)
+    )
+    if not motifs:
+        raise ValueError("No motif models were loaded.")
+    max_window = max(mimosa.window_size(record["model"]) for record in motifs)
+    lengths = np.diff(sequences.offsets)
+    if np.any(lengths < max_window):
+        shortest = int(lengths.min())
+        raise ValueError(
+            f"FASTA contains a sequence shorter than the largest motif window "
+            f"({shortest} < {max_window})."
+        )
 
-    Returns:
-        DataFrame with enrichment results.
-    """
-    torch.set_num_threads(2)
-    #device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    device = 'cpu'
-
-    # Load and filter promoters
-    print('-' * 30)
-    print('Reading promoters...')
-    promoters, ids = promoters_parser(path_to_promoters)
-
-    # Filter by length
-    length_counts = collections.Counter(len(seq) for seq in promoters)
-    if len(length_counts) > 1:
-        print('#' * 10 + ' WARNING! ' + '#' * 10)
-        print('FASTA file contains sequences with different lengths')
-        for length, count in length_counts.items():
-            print(f'  {count} sequences with length {length}')
-
-        target_length, _ = length_counts.most_common(1)[0]
-        print(f'Using only sequences with most common length: {target_length}')
-
-        valid_mask = [len(seq) == target_length for seq in promoters]
-        promoters = [seq for seq, valid in zip(promoters, valid_mask) if valid]
-        ids = np.array([id_ for id_, valid in zip(ids, valid_mask) if valid])
-        print('#' * 10 + ' DATA FILTERED! ' + '#' * 10)
-
-    gc_content = calculate_gc(promoters)
-    promoters = seq_to_int(promoters, device=device)
-    print('-' * 30)
-
-    # Load gene IDs
-    if type_of_data == 'set':
-        print('Reading gene set...')
+    if type_of_data == "set":
         foreground_ids = read_gene_set(path_to_data)
-        check = np.sum(np.isin(foreground_ids, ids))
-        if check == 0:
-            print('ERROR: No common IDs found. Check ID format.')
-            sys.exit(1)
-        background_ids = np.setdiff1d(ids, foreground_ids)
-
-    elif type_of_data == 'deg':
-        print('Reading DEG table...')
-        deg_table = pd.read_csv(path_to_data, sep='\t', comment='#')
-        deg_table = deg_table[deg_table['padj'] <= 1]
-
-        foreground_ids = get_deg_gene_ids(
-            deg_table, condition, padj_thr, log2fc_thr_deg
+        foreground_set = set(foreground_ids)
+        background_ids = np.asarray(
+            [item for item in ids if item not in foreground_set], dtype=object
         )
+    else:
+        deg = _validate_deg_table(read_table(path_to_data))
+        foreground_ids = get_deg_gene_ids(deg, condition, padj_thr, log2fc_thr_deg)
+        background_ids = get_background_gene_ids(deg, padj_thr, log2fc_thr_background)
 
-        if len(foreground_ids) <= 5:
-            print(f'WARNING: Number of DEGs ({len(foreground_ids)}) is very low!')
-
-        check = np.sum(np.isin(foreground_ids, ids))
-        if check == 0:
-            print('ERROR: No common IDs found. Check ID format.')
-            sys.exit(1)
-
-        background_ids = get_background_gene_ids(
-            deg_table, padj_thr, log2fc_thr_background
-        )
-
-    print('-' * 30)
-
-    # Load motifs and scan promoters
-    print('Loading motifs...')
-    motifs = read_motifs_from_db(motif_db, taxon)
-
-    print('Scanning promoters...')
-    scores = process_all_models(promoters, motifs, chunk_size=64)
-    print('-' * 30)
-
-    # Prepare data
     foreground_idx = get_indexes(ids, foreground_ids)
     background_pool_idx = get_indexes(ids, background_ids)
+    if foreground_idx.size == 0:
+        raise ValueError("Foreground IDs do not intersect the FASTA promoter IDs.")
+    if background_pool_idx.size == 0:
+        raise ValueError("Background pool does not intersect the FASTA promoter IDs.")
+    logger.info(
+        "Input: seed=%d, n_permutations=%d, match_ratio=%d, models=%d, "
+        "foreground=%d, background_pool=%d",
+        seed,
+        n_permutations,
+        match_ratio,
+        len(motifs),
+        foreground_idx.size,
+        background_pool_idx.size,
+    )
 
-    foreground_scores = scores[foreground_idx, :].cpu().numpy()
-    background_pool_scores = scores[background_pool_idx, :].cpu().numpy()
+    scores = process_all_models(sequences, motifs)
+    gc_content = calculate_gc(sequences)
     foreground_gc = gc_content[foreground_idx]
     background_pool_gc = gc_content[background_pool_idx]
-
-    # Select GC-matched background
-    print('Selecting GC-matched background...')
+    streams = np.random.SeedSequence(int(seed)).spawn(len(motifs) + 1)
+    gc_seed = int(streams[0].generate_state(1, dtype=np.uint32)[0])
     selected_bg_idx = select_gc_matched_background(
-        foreground_gc=foreground_gc,
-        background_gc=background_pool_gc,
-        match_ratio=match_ratio,
-        n_quantiles=10
+        foreground_gc, background_pool_gc, match_ratio=match_ratio, random_state=gc_seed
     )
-
-    background_scores = background_pool_scores[selected_bg_idx, :]
-    background_gc = background_pool_gc[selected_bg_idx]
-
-    print(f'Foreground: {len(foreground_scores)} samples')
-    print(f'Background: {len(background_scores)} samples (matched from {len(background_pool_scores)})')
-    print(f'GC - Foreground: {foreground_gc.mean():.3f}, Background: {background_gc.mean():.3f}')
-    print('-' * 30)
-
-    # Run permutation tests
-    print('Running stratified permutation tests...')
+    foreground_scores = scores[foreground_idx]
+    background_scores = scores[background_pool_idx[selected_bg_idx]]
+    motif_seeds = [int(stream.generate_state(1, dtype=np.uint32)[0]) for stream in streams[1:]]
     results = parallel_permutation_runner(
-        motifs=motifs,
-        foreground_scores=foreground_scores,
-        background_scores=background_scores,
-        foreground_gc=foreground_gc,
-        background_gc=background_gc,
+        motifs,
+        foreground_scores,
+        background_scores,
         n_permutations=n_permutations,
-        n_workers=nproc
+        n_workers=nproc,
+        seeds=motif_seeds,
     )
-    print('-' * 30)
 
-    # Format results
-    df = pd.DataFrame(results)
-    df['p_value_roc_adj'] = st.false_discovery_control(df['p_value_roc'])
-    df['p_value_prc_adj'] = st.false_discovery_control(df['p_value_prc'])
-
-    # Add cluster information for JASPAR
-    if motif_db == 'jaspar':
-        cluster_path = resources.files('esdeg').joinpath(f'clusters/{taxon}.tsv')
-        motif_to_cluster = get_motif_to_cluster(cluster_path)
-        df['jaspar_cluster'] = df['motif_id'].map(motif_to_cluster)
-
-        # Handle dimers
-        df['tf_name'] = df['tf_name'].str.split('::')
-        df['tf_class'] = df['tf_class'].str.split('::')
-        df['tf_family'] = df['tf_family'].str.split('::')
-
-        # Fix length mismatches
-        for col in ['tf_name', 'tf_class', 'tf_family']:
-            max_len = df[col].apply(len).max()
-            df[col] = df[col].apply(lambda x: x * max_len if len(x) < max_len else x)
-
-        df = df.explode(column=['tf_name', 'tf_class', 'tf_family'], ignore_index=True)
-
-    df = df.sort_values(by='auc_roc', ascending=False)
-
-    return df
+    result = pd.DataFrame(results)
+    result["p_value_roc_adj"] = _adjust_pvalues(result["p_value_roc"])
+    result["p_value_prc_adj"] = _adjust_pvalues(result["p_value_prc"])
+    if motif_db == "jaspar" and not model_paths:
+        cluster_path = resources.files("esdeg").joinpath(f"clusters/{taxon}.tsv")
+        result["jaspar_cluster"] = result["motif_id"].map(get_motif_to_cluster(str(cluster_path)))
+    return result.sort_values(
+        ["auc_roc", "motif_id"], ascending=[False, True], kind="mergesort"
+    ).reset_index(drop=True)

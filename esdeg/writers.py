@@ -1,202 +1,129 @@
-import os
-import plotly.express as px
-import xlsxwriter
+"""Output writers and the optional visualization."""
+
+from __future__ import annotations
+
+from contextlib import ExitStack
+from importlib import resources
+
 import numpy as np
 import pandas as pd
 import panel as pn
-from importlib import resources
+import plotly.express as px
 
 
-def write_table(df, path_to_output):
-    if 'jaspar_cluster' in df.columns:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    else:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    df = df.sort_values(by='auc_roc', ascending=False)
-    df.to_csv(path_to_output, sep='\t', index=False)
-    print('All done. Exit')
-    pass
+def write_table(df: pd.DataFrame, path_to_output) -> None:
+    """Write all columns in the supplied frame to TSV."""
+    df.to_csv(path_to_output, sep="\t", index=False)
 
 
-def write_table_ann(df, path_to_output):
-    if 'jaspar_cluster' in df.columns:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    else:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    df = df.sort_values(by='auc_roc', ascending=False)
-    df.to_csv(path_to_output, sep='\t', index=False)
-    print('All done. Exit')
-    pass
+write_table_ann = write_table
 
 
-
-def write_xlsx(df, taxon, path_to_output):
-    if 'jaspar_cluster' in df.columns:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    else:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    df = df.sort_values(by='auc_roc', ascending=False)
-
-    # Create a Pandas Excel writer using XlsxWriter as the engine.
-    writer = pd.ExcelWriter(path_to_output, engine='xlsxwriter')
-
-    # Convert the dataframe to an XlsxWriter Excel object.
-    df.to_excel(writer, sheet_name='ESDEG', index=False)
-
-    # Get the xlsxwriter objects from the dataframe writer object.
-    workbook  = writer.book
-    worksheet = writer.sheets['ESDEG']
-    worksheet.set_default_row(27)
-
-    image_row = 1
-    image_col = len(df.columns)
-    images = list(df.motif_id.map(lambda id: str(resources.files('esdeg').joinpath(f'logos/{taxon}/{id}.png'))))
-    for image in images:
-        worksheet.insert_image(image_row,
-                               image_col,
-                               image,
-                               {'x_scale': 1.2, 'y_scale': 1.2,
-                                'x_offset': 5, 'y_offset': 5,
-                                'positioning': 1})
-        # positioning = 1 allows move and size with cells (may not always perform as expected)
-        image_row += 1
-
-    cell_format = workbook.add_format()
-    cell_format.set_bold(True)
-    cell_format.set_border(True)
-    cell_format.set_align('center')
-    cell_format.set_align('top')
-
-    cell_format_2 = workbook.add_format()
-    cell_format_2.set_align('center')
-    cell_format_2.set_align('vcenter')
+def _find_logo(motif_id: str, taxon: str):
+    root = resources.files("esdeg").joinpath("logos")
+    preferred = root.joinpath(str(taxon), f"{motif_id}.png")
+    if preferred.is_file():
+        return preferred
+    for directory in root.iterdir():
+        candidate = directory.joinpath(f"{motif_id}.png")
+        if candidate.is_file():
+            return candidate
+    return None
 
 
-    worksheet.set_column(0, 0, 10, cell_format_2)
-    worksheet.set_column(1, 1, 14, cell_format_2)
-    worksheet.set_column(2, 2, 30, cell_format_2)
-    worksheet.set_column(3, 7, 14, cell_format_2)
-    # worksheet.set_column(4, 4, 13, cell_format_2)
-    # worksheet.set_column(5, 5, 11, cell_format_2)
-    # worksheet.set_column(6, 6, 14, cell_format_2)
-    worksheet.set_column(image_col, image_col, 48)
-    worksheet.set_row_pixels(0, 18, cell_format)
-    #worksheet.autofit()
-    worksheet.write(0, image_col, 'logo', cell_format)
-    writer.close()
-    return 0
+def write_xlsx(df: pd.DataFrame, taxon: str, path_to_output) -> None:
+    """Write a complete table and available motif logos to XLSX."""
+    with pd.ExcelWriter(path_to_output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name="ESDEG", index=False)
+        worksheet = writer.sheets["ESDEG"]
+        workbook = writer.book
+        header = workbook.add_format(
+            {"bold": True, "border": 1, "align": "center", "valign": "top"}
+        )
+        centered = workbook.add_format({"align": "center", "valign": "vcenter"})
+        worksheet.set_row(0, 18, header)
+        if len(df.columns):
+            worksheet.set_column(0, len(df.columns) - 1, 14, centered)
+
+        image_col = len(df.columns)
+        worksheet.write(0, image_col, "logo", header)
+        worksheet.set_column(image_col, image_col, 48)
+        with ExitStack() as stack:
+            for row, motif_id in enumerate(df["motif_id"].astype(str), 1):
+                logo = _find_logo(motif_id, taxon)
+                if logo is None:
+                    continue
+                local_logo = stack.enter_context(resources.as_file(logo))
+                worksheet.insert_image(
+                    row,
+                    image_col,
+                    str(local_logo),
+                    {"x_scale": 1.2, "y_scale": 1.2, "x_offset": 5, "y_offset": 5},
+                )
+                worksheet.set_row(row, 27)
 
 
-def write_xlsx_ann(df, path_to_output):
-    if 'jaspar_cluster' in df.columns:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    else:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    df = df.sort_values(by='auc_roc', ascending=False)
-
-    # Create a Pandas Excel writer using XlsxWriter as the engine.
-    writer = pd.ExcelWriter(path_to_output, engine='xlsxwriter')
-
-    # Convert the dataframe to an XlsxWriter Excel object.
-    df.to_excel(writer, sheet_name='ESDEG', index=False)
-
-    # Get the xlsxwriter objects from the dataframe writer object.
-    workbook  = writer.book
-    worksheet = writer.sheets['ESDEG']
-    worksheet.set_default_row(27)
-
-    image_row = 1
-    image_col = len(df.columns)
-
-    taxons = os.listdir(resources.files('esdeg').joinpath('logos'))
-    number_of_taxons = len(taxons)
-    images = []
-    for i in df['motif_id']:
-        img_flag = True
-        for index, taxon in enumerate(taxons):
-            img_path = str(resources.files('esdeg').joinpath(f'logos/{taxon}/{i}.png'))
-            if os.path.exists(img_path):
-                images.append(img_path)
-                img_flag = False
-                break
-        if img_flag:
-            print(f'Probably logo of motif {i} doesnt exist')
-            images.append('NA')
-
-    for image in images:
-        worksheet.insert_image(image_row,
-                               image_col,
-                               image,
-                               {'x_scale': 1.2, 'y_scale': 1.2,
-                                'x_offset': 5, 'y_offset': 5,
-                                'positioning': 1})
-        # positioning = 1 allows move and size with cells (may not always perform as expected)
-        image_row += 1
-    cell_format = workbook.add_format()
-    cell_format.set_bold(True)
-    cell_format.set_border(True)
-    cell_format.set_align('center')
-    cell_format.set_align('top')
-
-    cell_format_2 = workbook.add_format()
-    cell_format_2.set_align('center')
-    cell_format_2.set_align('vcenter')
+write_xlsx_ann = write_xlsx
 
 
-    worksheet.set_column(0, 0, 10, cell_format_2)
-    worksheet.set_column(1, 1, 14, cell_format_2)
-    worksheet.set_column(2, 2, 30, cell_format_2)
-    worksheet.set_column(3, 2, 30, cell_format_2)
-    worksheet.set_column(4, 7, 14, cell_format_2)
-    # worksheet.set_column(4, 4, 13, cell_format_2)
-    # worksheet.set_column(5, 5, 11, cell_format_2)
-    # worksheet.set_column(6, 6, 14, cell_format_2)
-    worksheet.set_column(image_col, image_col, 48)
-    worksheet.set_row_pixels(0, 18, cell_format)
-    #worksheet.autofit()
-    worksheet.write(0, image_col, 'logo', cell_format)
-    writer.close()
-    return 0
-
-
-def write_report(df, taxon, path_to_output):
-    if 'jaspar_cluster' in df.columns:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'jaspar_cluster', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    else:
-        df = df[['motif_id', 'tf_name', 'tf_class', 'tf_family', 'auc_roc', 'auc_prc', 'p_value_roc', 'p_value_prc', 'p_value_roc_adj', 'p_value_prc_adj']]
-    df = df.sort_values(by='auc_roc', ascending=False)
-    df = df[df.columns[:-1]]
-    df['logo'] = df.motif_id.map(lambda id: f'https://raw.githubusercontent.com/ubercomrade/esdeg/main/esdeg/logos/{taxon}/{id}.png')
-    table = pn.widgets.Tabulator(df, formatters={'logo': {'type': 'image'}}, pagination=None, text_align='center')
+def write_report(df: pd.DataFrame, taxon: str, path_to_output) -> None:
+    columns = [
+        column
+        for column in df.columns
+        if column
+        in {
+            "motif_id",
+            "tf_name",
+            "tf_class",
+            "tf_family",
+            "auc_roc",
+            "p_value_roc_adj",
+            "p_value_prc_adj",
+        }
+    ]
+    report = df.loc[:, columns].copy()
+    report["logo"] = report["motif_id"].map(
+        lambda motif_id: (
+            f"https://raw.githubusercontent.com/ubercomrade/esdeg/main/esdeg/logos/{taxon}/{motif_id}.png"
+        )
+    )
+    table = pn.widgets.Tabulator(
+        report, formatters={"logo": {"type": "image"}}, pagination=None, text_align="center"
+    )
     table.save(path_to_output)
-    pass
 
 
-def create_picture(df, path_to_output):
-    df['-log10(p_value_roc_adj)'] = -np.log10(df['p_value_roc_adj']) # pseudocounts
-    df = df[df['p_value_roc_adj'] < 0.05]
-    fig = px.scatter(df, y="auc_roc", x="-log10(p_value_roc_adj)", color="tf_class", symbol="tf_name",
-                    range_x=[0, np.max(df["-log10(p_value_roc_adj)"]) + 1],
-                    range_y=[0, np.max(df["p_value_roc_adj"]) + .02])
-    fig.add_vline(x=-np.log10(0.05), line_width=2.5, line_dash="dash", line_color="green",
-                 annotation_text="<b>-log10(0.05)</b>", annotation_position="top left",
-                 annotation=dict(font_color="green"))
-    fig.update_layout(
+def create_picture(df: pd.DataFrame, path_to_output, threshold: float = 0.05):
+    """Write an AUC versus adjusted-p-value report, including the empty case."""
+    if threshold <= 0:
+        raise ValueError("threshold must be positive.")
+    plot = df.copy()
+    pvalues = np.clip(plot["p_value_roc_adj"].astype(float), np.finfo(float).tiny, 1.0)
+    plot["-log10(p_value_roc_adj)"] = -np.log10(pvalues)
+    significant = plot[plot["p_value_roc_adj"] < threshold]
+    if significant.empty:
+        significant = pd.DataFrame(
+            columns=["-log10(p_value_roc_adj)", "auc_roc", "tf_class", "tf_name"]
+        )
+    figure = px.scatter(
+        significant,
+        y="auc_roc",
+        x="-log10(p_value_roc_adj)",
+        color="tf_class",
+        symbol="tf_name",
+        range_y=[0, 1],
+    )
+    figure.add_vline(x=-np.log10(threshold), line_dash="dash", line_color="green")
+    if plot[plot["p_value_roc_adj"] < threshold].empty:
+        figure.add_annotation(
+            text="No significant motifs", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
+        )
+    figure.update_layout(
         font_family="Courier New",
         font_size=16,
         legend_title="TF class, TF name",
-        yaxis_title="Motif relative abundance, DEG vs non-DEG - auc_prc_pvalue",
-        xaxis_title="-log10(adj.p-value)",
+        yaxis_title="ROC AUC",
+        xaxis_title="-log10(adjusted p-value)",
     )
-    fig.update_layout(
-            annotations=[
-            dict(
-                text="<b>-log10(0.05)</b>",
-                textangle=270,
-                font=dict(
-                    color="green",
-                    size=14
-                ))]
-    )
-    fig.write_html(path_to_output)
-    pass
+    figure.write_html(path_to_output)
+    return figure

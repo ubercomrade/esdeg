@@ -1,124 +1,169 @@
+"""Input and motif database readers."""
+
+from __future__ import annotations
+
 import json
-import numpy as np
+import logging
 from importlib import resources
+from pathlib import Path
+
+import mimosa
+import numpy as np
+import pandas as pd
 from pyjaspar import jaspardb
-from operator import itemgetter
 
-#read promoters
-def promoters_parser(path):
-    container = []
-    gname = ''
-    seq = ''
-    letters = {'A', 'C', 'G', 'T'}
-    with open(path) as file:
-        for line in file:
-            if line.startswith('>'):
-                if gname != '':
-                    container.append((gname, seq))
-                gname = line.strip().split(':')[0][1:]
-                seq = ''
+logger = logging.getLogger(__name__)
+JASPAR_RELEASE = "JASPAR2024"
+DNA_ALPHABET = "ACGT"
+
+
+def promoters_parser(path: str | Path):
+    """Read FASTA through Mimosa and normalize IDs before the first colon."""
+    sequences, names = mimosa.read_fasta(path)
+    if len(sequences) == 0:
+        raise ValueError(f"FASTA file {path!s} is empty.")
+
+    ids = [str(name).split(":", 1)[0].strip() for name in names]
+    if any(not promoter_id for promoter_id in ids):
+        raise ValueError("FASTA contains an empty promoter ID.")
+    if len(ids) != len(set(ids)):
+        raise ValueError("FASTA contains duplicate promoter IDs.")
+    lengths = np.diff(sequences.offsets)
+    if np.any(lengths == 0):
+        raise ValueError("FASTA contains an empty sequence.")
+    return sequences, np.asarray(ids, dtype=object)
+
+
+def read_table(path: str | Path) -> pd.DataFrame:
+    """Read either CSV or TSV input using the same parser everywhere."""
+    return pd.read_csv(path, sep=None, engine="python", comment="#")
+
+
+def read_gene_set(path: str | Path) -> np.ndarray:
+    """Read a deterministic, non-empty set of IDs."""
+    with open(path, encoding="utf-8") as handle:
+        ids = list(dict.fromkeys(line.strip() for line in handle if line.strip()))
+    if not ids:
+        raise ValueError(f"Gene set {path!s} is empty.")
+    return np.asarray(ids, dtype=object)
+
+
+def _annotation(value) -> str:
+    if value is None:
+        return "NA"
+    if isinstance(value, float) and np.isnan(value):
+        return "NA"
+    if isinstance(value, (list, tuple, np.ndarray)):
+        values = [str(item).strip() for item in value if str(item).strip()]
+        return "NA" if not values else "::".join(values)
+    text = str(value).strip()
+    return text or "NA"
+
+
+def _record(model, motif_id: str, tf_name, tf_class, tf_family) -> dict:
+    return {
+        "model": model,
+        "motif_id": motif_id,
+        "tf_name": _annotation(tf_name).upper(),
+        "tf_class": _annotation(tf_class),
+        "tf_family": _annotation(tf_family),
+    }
+
+
+def _hocomoco_records() -> list[dict]:
+    path = resources.files("esdeg").joinpath("hocomoco/H12CORE_annotation.jsonl")
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid HOCOMOCO JSONL at line {line_number}.") from exc
+
+            required = {"name", "pcm", "masterlist_info"}
+            missing = sorted(required - item.keys())
+            if missing:
+                raise ValueError(
+                    f"HOCOMOCO motif at line {line_number} misses: {', '.join(missing)}."
+                )
+            raw_pcm = np.asarray(item["pcm"], dtype=np.float32)
+            if raw_pcm.ndim != 2:
+                raise ValueError(f"HOCOMOCO motif {item['name']} PCM must be 2-D.")
+            if raw_pcm.shape[1] == 4:
+                pcm = raw_pcm.T
+            elif raw_pcm.shape[0] == 4:
+                pcm = raw_pcm
             else:
-                seq += ''.join([l if l in letters else 'N' for l in line.strip().upper()])
-        container.append((gname, seq))
-    container.sort(key=itemgetter(0))
-    promoters_ids = [i[0] for i in container]
-    promoters = [i[1] for i in container]
-    return promoters, np.array(promoters_ids)
+                raise ValueError(
+                    f"HOCOMOCO motif {item['name']} PCM must have shape (length, 4) or (4, length)."
+                )
+            if pcm.shape[0] != 4 or pcm.shape[1] < 1:
+                raise ValueError(f"HOCOMOCO motif {item['name']} PCM has invalid shape.")
+            if int(item.get("length", pcm.shape[1])) != pcm.shape[1]:
+                raise ValueError(f"HOCOMOCO motif {item['name']} length disagrees with PCM.")
+            if pcm.shape[1] < 6:
+                continue
 
-
-#Read motif DB
-def dict_to_array(motif):
-    motif = [motif[i] for i in motif.keys()]
-    return np.array(motif)
-
-
-def pfm_to_pwm(pfm):
-    background = 0.25
-    pwm = np.log(pfm / background)
-    return pwm
-
-
-def pcm_to_pfm(pcm):
-    number_of_sites = pcm.sum(axis=0)
-    nuc_pseudo = 0.25
-    pfm = (pcm + nuc_pseudo) / (number_of_sites + 1)
-    return pfm
-
-
-def check_motif_annotaion(ann):
-    if len(ann) == 0:
-        ann = 'NA'
-    elif len(ann) == 1:
-        ann = ann[0]
-    else:
-        ann = '::'.join(ann)
-    return ann
-
-
-def read_motifs_from_db(motif_db, taxon):
-    print(f'Read motifs DB: {motif_db}')
-    container = []
-    if motif_db == 'hocomoco':
-        hocomoco_path = resources.files('esdeg').joinpath('hocomoco/H12CORE_annotation.jsonl')
-        with open(hocomoco_path) as file:
-            motifs = file.readlines()
-        motifs = [json.loads(i) for i in motifs]
-        motifs = [i for i in motifs if i['length'] >= 6]
-        number_of_motifs = len(motifs)
-        for motif_data in motifs:
-            motif_id = motif_data['name']
-            if 'HUMAN' in motif_data['masterlist_info']['species']:
-                tf_name = motif_data['masterlist_info']['species']['HUMAN']['gene_symbol'].upper()
-            else:
-                tf_name = motif_data['masterlist_info']['species']['MOUSE']['gene_symbol'].upper()
-            tf_class = motif_data['masterlist_info']['tfclass_class']
-            tf_family = motif_data['masterlist_info']['tfclass_family']
-
-            pcm = np.array(motif_data['pcm']).T
-            pfm = pcm_to_pfm(pcm)
-            pfm = np.concatenate((pfm, np.min(pfm, axis=0).reshape(1, pfm.shape[1])), axis=0)
-            pwm = pfm_to_pwm(pfm)
-            pwm = pwm.astype(np.float64)
-
-            container.append(
-                {'motif_id': motif_id,
-                'tf_name': tf_name,
-                'tf_class': tf_class,
-                'tf_family': tf_family,
-                'pfm': pfm,
-                'pwm': pwm,
-                'length': pfm.shape[1]}
+            info = item["masterlist_info"]
+            species = info.get("species", {})
+            species_info = species.get("HUMAN") or species.get("MOUSE") or {}
+            pfm = mimosa.pcm_to_pfm(pcm, pseudocount=0.25)
+            model = mimosa.pwm_from_pfm(pfm, background=0.25, name=item["name"])
+            records.append(
+                _record(
+                    model,
+                    item["name"],
+                    species_info.get("gene_symbol", "NA"),
+                    info.get("tfclass_class", "NA"),
+                    info.get("tfclass_family", "NA"),
+                )
             )
+    return records
 
 
-    elif motif_db == 'jaspar':
-        #plants vertebrates insects urochordates nematodes fungi
-        jdb_obj = jaspardb(release='JASPAR2024')
-        motifs = jdb_obj.fetch_motifs(collection = 'CORE',tax_group = [taxon], min_length=6)
-        number_of_motifs = len(motifs)
-        for motif_data in motifs:
-            motif_id = motif_data.matrix_id
-            tf_name = motif_data.name
-            tf_class = check_motif_annotaion(motif_data.tf_class)
-            tf_family = check_motif_annotaion(motif_data.tf_family)
+def _jaspar_pcm(counts, motif_id: str) -> np.ndarray:
+    try:
+        rows = [counts[base] if base in counts else counts[base.lower()] for base in DNA_ALPHABET]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(f"JASPAR motif {motif_id} has no complete A/C/G/T mapping.") from exc
+    pcm = np.asarray(rows, dtype=np.float32)
+    if pcm.ndim != 2 or pcm.shape[0] != 4 or pcm.shape[1] < 1:
+        raise ValueError(f"JASPAR motif {motif_id} PCM must have shape (4, length).")
+    return pcm
 
-            pcm = motif_data.counts
-            pcm = dict_to_array(pcm)
-            pfm = pcm_to_pfm(pcm)
-            pfm = np.concatenate((pfm, np.min(pfm, axis=0).reshape(1, pfm.shape[1])), axis=0)
-            pwm = pfm_to_pwm(pfm)
-            pwm = pwm.astype(np.float64)
 
-            container.append(
-                {'motif_id': motif_id,
-                'tf_name': tf_name,
-                'tf_class': tf_class,
-                'tf_family': tf_family,
-                'pfm': pfm,
-                'pwm': pwm,
-                'length': pfm.shape[1]}
-            )
+def _jaspar_records(taxon: str) -> list[dict]:
+    try:
+        database = jaspardb(release=JASPAR_RELEASE)
+        motifs = database.fetch_motifs(collection="CORE", tax_group=[taxon], min_length=6)
+    except Exception as exc:
+        raise RuntimeError(f"Failed to load {JASPAR_RELEASE} for taxon {taxon}: {exc}") from exc
 
-    print(f'Number of matrices = {number_of_motifs}')
-    print('-'*30)
-    return container
+    records = []
+    for motif in motifs:
+        motif_id = str(motif.matrix_id)
+        pcm = _jaspar_pcm(motif.counts, motif_id)
+        pfm = mimosa.pcm_to_pfm(pcm, pseudocount=0.25)
+        model = mimosa.pwm_from_pfm(pfm, background=0.25, name=motif_id)
+        records.append(_record(model, motif_id, motif.name, motif.tf_class, motif.tf_family))
+    return records
+
+
+def read_motifs_from_db(motif_db: str, taxon: str) -> list[dict]:
+    """Load database motifs using the single record contract."""
+    if motif_db not in {"jaspar", "hocomoco"}:
+        raise ValueError(f"Unknown motif database: {motif_db!r}.")
+    records = _hocomoco_records() if motif_db == "hocomoco" else _jaspar_records(taxon)
+    logger.info("Loaded %d motifs from %s.", len(records), motif_db)
+    return records
+
+
+def read_model_records(paths) -> list[dict]:
+    """Load one Mimosa model per path for the optional file-model interface."""
+    records = []
+    for path in paths:
+        model = mimosa.read_model(path, format="auto")
+        records.append(_record(model, model.name, "NA", "NA", "NA"))
+    return records
