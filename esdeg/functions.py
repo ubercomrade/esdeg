@@ -225,6 +225,14 @@ def permutation_loop(all_labels, all_scores, n_permutations, seed):
     """Run an upper-tail permutation loop with a private Numba RNG seed."""
     np.random.seed(seed)
     n_samples = len(all_labels)
+    order = np.argsort(all_scores)[::-1]
+    group_end = np.empty(n_samples, dtype=np.bool_)
+    for index in range(n_samples - 1):
+        group_end[index] = all_scores[order[index]] != all_scores[order[index + 1]]
+    group_end[-1] = True
+    n_foreground = np.sum(all_labels == 1)
+    n_background = np.sum(all_labels == 0)
+    false_weight = 1.0 if n_background == 0 else n_foreground / n_background
     permuted_auc_roc = np.empty(n_permutations, dtype=np.float32)
     permuted_auc_prc = np.empty(n_permutations, dtype=np.float32)
     shuffled_labels = all_labels.copy()
@@ -235,7 +243,27 @@ def permutation_loop(all_labels, all_scores, n_permutations, seed):
                 shuffled_labels[swap],
                 shuffled_labels[index],
             )
-        auc_roc, auc_prc = compute_aucs(shuffled_labels, all_scores)
+        true_positive = 0
+        false_positive = 0
+        previous_tpr = 0.0
+        previous_fpr = 0.0
+        previous_precision = 1.0
+        auc_roc = 0.0
+        auc_prc = 0.0
+        for index in range(n_samples):
+            if shuffled_labels[order[index]] == 1:
+                true_positive += 1
+            else:
+                false_positive += 1
+            if group_end[index]:
+                tpr = 0.0 if n_foreground == 0 else true_positive / n_foreground
+                fpr = 0.0 if n_background == 0 else false_positive / n_background
+                precision = true_positive / (true_positive + false_weight * false_positive)
+                auc_roc += (fpr - previous_fpr) * (tpr + previous_tpr) / 2
+                auc_prc += (tpr - previous_tpr) * (precision + previous_precision) / 2
+                previous_tpr = tpr
+                previous_fpr = fpr
+                previous_precision = precision
         permuted_auc_roc[permutation] = auc_roc
         permuted_auc_prc[permutation] = auc_prc
     return permuted_auc_roc, permuted_auc_prc
@@ -522,7 +550,6 @@ def esdeg(
         background_pool_idx.size,
     )
 
-    scores = process_all_models(sequences, motifs)
     gc_content = calculate_gc(sequences)
     foreground_gc = gc_content[foreground_idx]
     background_pool_gc = gc_content[background_pool_idx]
@@ -531,8 +558,13 @@ def esdeg(
     selected_bg_idx = select_gc_matched_background(
         foreground_gc, background_pool_gc, match_ratio=match_ratio, random_state=gc_seed
     )
-    foreground_scores = scores[foreground_idx]
-    background_scores = scores[background_pool_idx[selected_bg_idx]]
+    selected_idx = np.concatenate((foreground_idx, background_pool_idx[selected_bg_idx]))
+    selected_sequences = mimosa.EncodedSequences.from_rows(
+        sequences[index] for index in selected_idx
+    )
+    scores = process_all_models(selected_sequences, motifs)
+    foreground_scores = scores[: foreground_idx.size]
+    background_scores = scores[foreground_idx.size :]
     motif_seeds = [int(stream.generate_state(1, dtype=np.uint32)[0]) for stream in streams[1:]]
     results = parallel_permutation_runner(
         motifs,
