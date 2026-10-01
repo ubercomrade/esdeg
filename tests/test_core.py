@@ -23,9 +23,19 @@ def test_matching_is_unique_reproducible_and_close():
     first = select_matched_background(foreground, pool, 5, random_state=7)
     second = select_matched_background(foreground, pool, 5, random_state=7)
     assert np.array_equal(first, second)
-    assert len(first) == len(np.unique(first)) == 100
+    assert len(first) == len(np.unique(first))
+    assert len(first) % 20 == 0 and 20 <= len(first) <= 100
     assert np.all(pool[first].mean(axis=0) > pool.mean(axis=0))
-    assert len(select_matched_background(foreground, pool[:30], 5, random_state=7)) == 30
+    assert len(select_matched_background(foreground, pool[:10], 1, random_state=7)) == 10
+
+
+def test_matching_lowers_ratio_when_background_is_unbalanced():
+    rng = np.random.default_rng(0)
+    pool = np.vstack((rng.normal(size=(400, 2)), rng.normal(loc=3.0, size=(40, 2))))
+    foreground = rng.normal(loc=3.0, size=(20, 2))
+    result = select_matched_background(foreground, pool, 5, random_state=1)
+    assert len(result) % 20 == 0 and len(result) < 100
+    assert np.abs(pool[result].mean(axis=0) - foreground.mean(axis=0)).max() < 0.5
 
 
 def test_cpg_log_oe_does_not_cross_sequence_boundaries():

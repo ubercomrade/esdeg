@@ -20,6 +20,7 @@ from esdeg.parsers import (
 
 logger = logging.getLogger(__name__)
 DEFAULT_BACKGROUND_LFC = np.log2(5 / 4)
+MAX_SMD = 0.1
 
 
 def calculate_gc(sequences) -> np.ndarray:
@@ -77,7 +78,7 @@ def _standardized_difference(foreground: np.ndarray, selected: np.ndarray) -> np
 def select_matched_background(
     foreground_features: np.ndarray,
     background_features: np.ndarray,
-    match_ratio: int = 5,
+    match_ratio: int = 3,
     random_state: int | None = None,
     feature_names: tuple[str, ...] = (),
 ) -> np.ndarray:
@@ -85,7 +86,8 @@ def select_matched_background(
 
     Distances are Mahalanobis distances under the covariance of the foreground and the
     candidate pool. Matching runs in rounds: every foreground promoter takes its nearest
-    unused candidate before any promoter takes a second one.
+    unused candidate before any promoter takes a second one. If the standardized mean
+    difference of any feature exceeds MAX_SMD, the ratio is lowered by one and matching repeats.
     """
     foreground = _validate_features(foreground_features, "foreground_features")
     pool = _validate_features(background_features, "background_features")
@@ -124,6 +126,16 @@ def select_matched_background(
         raise ValueError("Could not select a unique matched background pool.")
     names = feature_names or tuple(f"feature{index}" for index in range(foreground.shape[1]))
     smd = _standardized_difference(foreground, pool[result])
+    if int(match_ratio) > 1 and np.any(np.abs(smd) > MAX_SMD):
+        logger.info(
+            "Background with match_ratio=%d is unbalanced (max |SMD|=%.3f); retrying with %d.",
+            match_ratio,
+            np.abs(smd).max(),
+            match_ratio - 1,
+        )
+        return select_matched_background(
+            foreground, pool, int(match_ratio) - 1, random_state, feature_names
+        )
     logger.info(
         "Matched background: n=%d, %s",
         result.size,
@@ -135,12 +147,13 @@ def select_matched_background(
         ),
     )
     for name, value in zip(names, smd, strict=True):
-        if abs(value) > 0.1:
+        if abs(value) > MAX_SMD:
             logger.warning(
-                "Background is poorly matched on %s (|SMD|=%.3f > 0.1); "
+                "Background is poorly matched on %s (|SMD|=%.3f > %.1f); "
                 "p-values may be affected by promoter composition.",
                 name,
                 abs(value),
+                MAX_SMD,
             )
     return result
 
@@ -274,7 +287,7 @@ def esdeg(
     log2fc_thr_deg: float = 1.0,
     log2fc_thr_background: float = np.log2(5 / 4),
     padj_thr: float = 0.05,
-    match_ratio: int = 5,
+    match_ratio: int = 3,
     seed: int = 0,
     model_paths=None,
     background_path: str | None = None,

@@ -36,7 +36,7 @@ uv run esdeg enrichment \
   example/E-MTAB-6598.degs.csv \
   enrichment.tsv \
   --motifs hocomoco \
-  --seed 0 --match-ratio 5
+  --seed 0 --match-ratio 3
 ```
 
 Test a one-ID-per-line gene set instead:
@@ -96,7 +96,7 @@ esdeg enrichment PROMOTERS INPUT OUTPUT [options]
 | `--pvalue` | `0.05` | Foreground DEG `padj` threshold. |
 | `--log2fc-deg` | `1.0` | Absolute foreground log2 fold-change threshold. |
 | `--log2fc-back` | `log2(5/4)` | Absolute background log2 fold-change ceiling. |
-| `--match-ratio` | `5` | Maximum background-to-foreground size ratio after matching. |
+| `--match-ratio` | `3` | Maximum background-to-foreground size ratio. It is lowered one step at a time (down to 1) while the standardized mean difference of GC or CpG exceeds 0.1. |
 | `--seed` | `0` | Reproducible seed for background matching. |
 | `--background-output PATH` | — | Write the IDs of the selected background promoters to a TSV. |
 | `--visualization PATH` | — | Write an interactive HTML scatter plot. |
@@ -107,7 +107,7 @@ esdeg enrichment PROMOTERS INPUT OUTPUT [options]
 
 For each motif, ESDEG scans every promoter on the best strand and retains the maximum PWM score across positions. A high score means that a promoter contains a stronger match to that motif.
 
-The background used for testing has at most `match-ratio × N_foreground` promoters. ESDEG describes every promoter by its GC fraction and by its log2 CpG observed/expected ratio, `log2((CG + 1) / (C·G / L + 1))`. Each foreground promoter in turn takes the nearest unused candidate from the background pool by Mahalanobis distance on these two features, and this repeats until the target size is reached, so no promoter is used twice. Matching is performed once for the run. The log reports the mean of each feature in the foreground, the pool, and the selected background, together with the standardized mean difference (SMD); a warning is issued when `|SMD| > 0.1`.
+The background used for testing has at most `match-ratio × N_foreground` promoters. ESDEG describes every promoter by its GC fraction and by its log2 CpG observed/expected ratio, `log2((CG + 1) / (C·G / L + 1))`. Each foreground promoter in turn takes the nearest unused candidate from the background pool by Mahalanobis distance on these two features, and this repeats until the target size is reached, so no promoter is used twice. Matching is performed once for the run. The log reports the mean of each feature in the foreground, the pool, and the selected background, together with the standardized mean difference (SMD); if `|SMD| > 0.1` the ratio is lowered and matching repeats, and a warning is issued if the ratio of 1 is still unbalanced.
 
 For each motif, the foreground and selected background score distributions produce the effect size `auc_roc`, the ROC AUC. A value of `0.5` indicates no score separation; values above `0.5` indicate enrichment of high motif scores in the foreground. It equals the Mann–Whitney statistic `U / (N_foreground · N_background)`.
 

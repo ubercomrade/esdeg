@@ -47,7 +47,7 @@ def parse_args(argv=None):
     enrichment.add_argument(
         "-L", "--log2fc-back", "--log2fc_back", type=float, default=0.32192809488736235
     )
-    enrichment.add_argument("--match-ratio", type=int, default=5)
+    enrichment.add_argument("--match-ratio", type=int, default=3)
     enrichment.add_argument("--seed", type=int, default=0)
     enrichment.add_argument(
         "--background-output", default=None, help="Path to a TSV of selected background IDs."
