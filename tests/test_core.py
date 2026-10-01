@@ -2,70 +2,61 @@ import mimosa
 import numpy as np
 import pandas as pd
 import pytest
-from numba import njit
+from scipy.stats import mannwhitneyu
 
 from esdeg.annotation import _expand_dimers
 from esdeg.functions import (
-    compute_aucs,
+    calculate_cpg_log_oe,
+    calculate_gc,
     esdeg,
-    permutation_loop,
-    permutation_test,
+    mann_whitney_enrichment,
     process_all_models,
-    select_gc_matched_background,
+    select_matched_background,
 )
 from esdeg.parsers import read_table
 
 
-def test_gc_matching_is_unique_and_reproducible():
-    foreground = np.array([0.1, 0.1, 0.9])
-    background = np.array([0.1, 0.2, 0.8, 0.9, 0.5])
-    first = select_gc_matched_background(foreground, background, 1, random_state=7)
-    second = select_gc_matched_background(foreground, background, 1, random_state=7)
+def test_matching_is_unique_reproducible_and_close():
+    rng = np.random.default_rng(0)
+    pool = rng.normal(size=(500, 2))
+    foreground = rng.normal(loc=1.0, scale=0.3, size=(20, 2))
+    first = select_matched_background(foreground, pool, 5, random_state=7)
+    second = select_matched_background(foreground, pool, 5, random_state=7)
     assert np.array_equal(first, second)
-    assert len(first) == len(np.unique(first)) == 3
+    assert len(first) == len(np.unique(first)) == 100
+    assert np.all(pool[first].mean(axis=0) > pool.mean(axis=0))
+    assert len(select_matched_background(foreground, pool[:30], 5, random_state=7)) == 30
 
 
-def test_auc_and_permutation_are_one_sided_and_reproducible():
-    labels = np.array([1.0, 1.0, 0.0, 0.0])
-    assert compute_aucs(labels, np.array([4.0, 3.0, 2.0, 1.0]))[0] == 1.0
-    first = permutation_test(np.array([4.0, 3.0]), np.array([2.0, 1.0]), 10, seed=3)
-    second = permutation_test(np.array([4.0, 3.0]), np.array([2.0, 1.0]), 10, seed=3)
-    assert first == second
-    assert first.p_value_roc >= 1 / 11
-
-
-@njit
-def _reference_permutations(labels, scores, count, seed):
-    np.random.seed(seed)
-    shuffled = labels.copy()
-    result = np.empty((count, 2), dtype=np.float32)
-    for permutation in range(count):
-        for index in range(len(labels) - 1, 0, -1):
-            swap = np.random.randint(0, index + 1)
-            shuffled[index], shuffled[swap] = shuffled[swap], shuffled[index]
-        result[permutation] = compute_aucs(shuffled, scores)
-    return result
-
-
-def test_permutation_loop_matches_resorting_reference():
-    cases = [
-        ([4, 3], [2, 1]),
-        ([3, 3, 1], [3, 2, 1, 1]),
-        ([1, 2, 3], [4, 5]),
-        ([1, 1], [1, 1]),
+def test_cpg_log_oe_does_not_cross_sequence_boundaries():
+    rows = ["ACGT", "CCGG", "CATG", "GCAC"]
+    sequences = mimosa.EncodedSequences.from_rows(mimosa.encode_sequence(row) for row in rows)
+    expected = [
+        np.log2((n_cg + 1) / (row.count("C") * row.count("G") / len(row) + 1))
+        for row, n_cg in zip(rows, [1, 1, 0, 0], strict=True)
     ]
-    for foreground, background in cases:
-        scores = np.asarray(foreground + background, dtype=np.float64)
-        labels = np.asarray([1] * len(foreground) + [0] * len(background), dtype=np.float64)
-        observed = compute_aucs(labels, scores)
-        for seed, count in ((0, 1), (3, 101), (19, 101)):
-            expected = _reference_permutations(labels, scores, count, seed)
-            actual = np.column_stack(permutation_loop(labels, scores, count, seed))
-            np.testing.assert_allclose(actual, expected, rtol=0, atol=1e-7)
-            np.testing.assert_array_equal(
-                np.count_nonzero(actual >= observed, axis=0),
-                np.count_nonzero(expected >= observed, axis=0),
-            )
+    np.testing.assert_allclose(calculate_cpg_log_oe(sequences), expected)
+
+
+def test_mann_whitney_matches_scipy_with_ties_and_is_one_sided():
+    rng = np.random.default_rng(1)
+    foreground = np.round(rng.normal(0.4, 1.0, size=(40, 3)), 1)
+    background = np.round(rng.normal(0.0, 1.0, size=(200, 3)), 1)
+    auc, pvalue = mann_whitney_enrichment(foreground, background)
+    for column in range(3):
+        expected = mannwhitneyu(
+            foreground[:, column], background[:, column], alternative="greater"
+        )
+        assert auc[column] == pytest.approx(expected.statistic / (40 * 200))
+        assert pvalue[column] == pytest.approx(expected.pvalue)
+    _, depleted_p = mann_whitney_enrichment(background[:40, :1], foreground[:, :1])
+    assert depleted_p[0] > 0.5
+    perfect_auc, perfect_p = mann_whitney_enrichment(
+        np.array([[4.0], [3.0]]), np.array([[2.0], [1.0]])
+    )
+    assert perfect_auc[0] == 1.0 and perfect_p[0] < 0.5
+    constant_auc, constant_p = mann_whitney_enrichment(np.ones((3, 1)), np.ones((6, 1)))
+    assert constant_auc[0] == 0.5 and constant_p[0] == 1.0
 
 
 def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeypatch):
@@ -100,13 +91,10 @@ def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeyp
             path_to_data="unused",
             type_of_data=mode,
             match_ratio=ratio,
-            n_permutations=5,
-            nproc=1,
             seed=9,
         )
-        gc = np.array([sum(base in "CG" for base in row) / len(row) for row in rows])
-        gc_seed = int(np.random.SeedSequence(9).spawn(2)[0].generate_state(1)[0])
-        selected = select_gc_matched_background(gc[:2], gc[pool], ratio, gc_seed)
+        features = np.column_stack((calculate_gc(sequences), calculate_cpg_log_oe(sequences)))
+        selected = select_matched_background(features[:2], features[pool], ratio, 9)
         expected_idx = np.concatenate((np.arange(2), pool[selected]))
         np.testing.assert_array_equal(
             process_all_models(scanned[-1], [motif]), full_scores[expected_idx]
@@ -119,7 +107,7 @@ def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeyp
     )
     monkeypatch.setattr("esdeg.functions.promoters_parser", lambda path: (short, ids))
     with pytest.raises(ValueError, match="shorter than the largest motif window"):
-        esdeg(path_to_promoters="unused", path_to_data="unused", n_permutations=1)
+        esdeg(path_to_promoters="unused", path_to_data="unused")
 
 
 def test_dimer_metadata_broadcasts_singletons():

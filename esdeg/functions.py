@@ -1,17 +1,14 @@
-"""Motif enrichment, GC matching, and permutation statistics."""
+"""Motif enrichment, composition-matched background, and Mann-Whitney statistics."""
 
 from __future__ import annotations
 
 import logging
-import os
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import dataclass
 from importlib import resources
 
 import mimosa
 import numpy as np
 import pandas as pd
-from numba import njit
+from scipy.stats import mannwhitneyu
 
 from esdeg.parsers import (
     promoters_parser,
@@ -45,349 +42,139 @@ def calculate_gc(sequences) -> np.ndarray:
     )
 
 
-def _validate_gc(values, name: str) -> np.ndarray:
+def calculate_cpg_log_oe(sequences) -> np.ndarray:
+    """Return per-sequence log2 CpG observed/expected ratios with a pseudocount of one."""
+    data = np.asarray(sequences.data)
+    offsets = np.asarray(sequences.offsets)
+    lengths = np.diff(offsets)
+    if np.any(lengths == 0):
+        raise ValueError("CpG content cannot be calculated for an empty sequence.")
+    is_c = data == 1
+    is_g = data == 2
+    n_c = np.add.reduceat(is_c, offsets[:-1]).astype(np.float64)
+    n_g = np.add.reduceat(is_g, offsets[:-1]).astype(np.float64)
+    cg = np.append(is_c[:-1] & is_g[1:], False)
+    cg[offsets[1:-1] - 1] = False  # a dinucleotide must not span two sequences
+    n_cg = np.add.reduceat(cg, offsets[:-1]).astype(np.float64)
+    return np.log2((n_cg + 1.0) / (n_c * n_g / lengths + 1.0))
+
+
+def _validate_features(values, name: str) -> np.ndarray:
     values = np.asarray(values, dtype=np.float64)
-    if values.ndim != 1 or values.size == 0:
-        raise ValueError(f"{name} must be a non-empty one-dimensional array.")
-    if not np.all(np.isfinite(values)) or np.any((values < 0) | (values > 1)):
-        raise ValueError(f"{name} must contain finite values in [0, 1].")
+    if values.ndim != 2 or values.shape[0] == 0 or values.shape[1] == 0:
+        raise ValueError(f"{name} must be a non-empty two-dimensional array.")
+    if not np.all(np.isfinite(values)):
+        raise ValueError(f"{name} must contain finite values.")
     return values
 
 
-def _largest_remainder(counts: np.ndarray, total: int) -> np.ndarray:
-    ideal = total * counts / counts.sum()
-    quota = np.floor(ideal).astype(np.int64)
-    remainder = total - int(quota.sum())
-    if remainder:
-        order = np.argsort(-(ideal - quota), kind="stable")
-        quota[order[:remainder]] += 1
-    return quota
+def _standardized_difference(foreground: np.ndarray, selected: np.ndarray) -> np.ndarray:
+    spread = np.sqrt((foreground.var(axis=0) + selected.var(axis=0)) / 2)
+    difference = foreground.mean(axis=0) - selected.mean(axis=0)
+    return np.divide(difference, spread, out=np.zeros_like(difference), where=spread > 0)
 
 
-def select_gc_matched_background(
-    foreground_gc: np.ndarray,
-    background_gc: np.ndarray,
+def select_matched_background(
+    foreground_features: np.ndarray,
+    background_features: np.ndarray,
     match_ratio: int = 5,
     random_state: int | None = None,
+    feature_names: tuple[str, ...] = (),
 ) -> np.ndarray:
-    """Select a unique background pool with a robust foreground GC match."""
-    foreground_gc = _validate_gc(foreground_gc, "foreground_gc")
-    background_gc = _validate_gc(background_gc, "background_gc")
+    """Select a unique background pool by nearest-neighbour matching on promoter features.
+
+    Distances are Mahalanobis distances under the covariance of the foreground and the
+    candidate pool. Matching runs in rounds: every foreground promoter takes its nearest
+    unused candidate before any promoter takes a second one.
+    """
+    foreground = _validate_features(foreground_features, "foreground_features")
+    pool = _validate_features(background_features, "background_features")
+    if foreground.shape[1] != pool.shape[1]:
+        raise ValueError("foreground and background features must have the same columns.")
     if isinstance(match_ratio, bool) or not isinstance(match_ratio, (int, np.integer)):
         raise ValueError("match_ratio must be a positive integer.")
     if match_ratio <= 0:
         raise ValueError("match_ratio must be a positive integer.")
 
-    target = min(background_gc.size, int(match_ratio) * foreground_gc.size)
-    n_bins = max(1, min(10, foreground_gc.size // 50))
-    quantiles = np.quantile(foreground_gc, np.linspace(0, 1, n_bins + 1))
-    inner_edges = np.unique(quantiles[1:-1])
-    foreground_bins = np.searchsorted(inner_edges, foreground_gc, side="right")
-    background_bins = np.searchsorted(inner_edges, background_gc, side="right")
-    n_bins = len(inner_edges) + 1
+    target = min(pool.shape[0], int(match_ratio) * foreground.shape[0])
+    combined = np.vstack((foreground, pool))
+    covariance = np.atleast_2d(np.cov(combined, rowvar=False))
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+    keep = eigenvalues > 1e-12 * max(float(eigenvalues.max()), 1e-300)
+    whitening = eigenvectors[:, keep] / np.sqrt(eigenvalues[keep])
+    center = combined.mean(axis=0)
+    foreground_white = (foreground - center) @ whitening
+    pool_white = (pool - center) @ whitening
 
-    counts = np.bincount(foreground_bins, minlength=n_bins)
-    quota = _largest_remainder(counts, target)
     rng = np.random.default_rng(random_state)
+    available = np.ones(pool.shape[0], dtype=bool)
     selected: list[int] = []
-    available = np.ones(background_gc.size, dtype=bool)
-
-    for bin_index, needed in enumerate(quota):
-        if needed == 0:
-            continue
-        local = np.flatnonzero(available & (background_bins == bin_index))
-        take = min(int(needed), local.size)
-        if take:
-            chosen = rng.choice(local, size=take, replace=False)
-            selected.extend(int(index) for index in chosen)
-            available[chosen] = False
-
-        deficit = int(needed) - take
-        if deficit:
-            foreground_in_bin = foreground_gc[foreground_bins == bin_index]
-            center = (
-                float(foreground_in_bin.mean())
-                if foreground_in_bin.size
-                else float(background_gc.mean())
-            )
-            candidates = np.flatnonzero(available)
-            order = np.argsort(np.abs(background_gc[candidates] - center), kind="stable")
-            chosen = candidates[order[:deficit]]
-            selected.extend(int(index) for index in chosen)
-            available[chosen] = False
+    while len(selected) < target:
+        for row in rng.permutation(foreground.shape[0]):
+            if len(selected) == target:
+                break
+            distance = np.sum((pool_white - foreground_white[row]) ** 2, axis=1)
+            distance[~available] = np.inf
+            best = int(np.argmin(distance))
+            available[best] = False
+            selected.append(best)
 
     result = np.asarray(selected, dtype=np.int32)
     if result.size != target or np.unique(result).size != result.size:
-        raise ValueError("Could not select a unique GC-matched background pool.")
+        raise ValueError("Could not select a unique matched background pool.")
+    names = feature_names or tuple(f"feature{index}" for index in range(foreground.shape[1]))
+    smd = _standardized_difference(foreground, pool[result])
     logger.info(
-        "GC-matched background: n=%d, foreground_gc=%.4f, background_gc=%.4f, bins=%d",
+        "Matched background: n=%d, %s",
         result.size,
-        foreground_gc.mean(),
-        background_gc[result].mean(),
-        n_bins,
+        ", ".join(
+            f"{name}: foreground={foreground[:, index].mean():.4f} "
+            f"pool={pool[:, index].mean():.4f} background={pool[result, index].mean():.4f} "
+            f"smd={smd[index]:+.3f}"
+            for index, name in enumerate(names)
+        ),
     )
+    for name, value in zip(names, smd, strict=True):
+        if abs(value) > 0.1:
+            logger.warning(
+                "Background is poorly matched on %s (|SMD|=%.3f > 0.1); "
+                "p-values may be affected by promoter composition.",
+                name,
+                abs(value),
+            )
     return result
 
 
-@dataclass(frozen=True)
-class PermutationResult:
-    auc_roc: float
-    auc_prc: float
-    p_value_roc: float
-    p_value_prc: float
+def mann_whitney_enrichment(
+    foreground_scores: np.ndarray, background_scores: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return ROC AUC and one-sided p-values for each score column.
 
-
-@njit(cache=True)
-def precision_recall_curve(classification, scores):
-    """Prevalence-adjusted precision-recall curve used by ESDEG."""
-    if len(scores) == 0:
-        return np.array([1.0]), np.array([0.0]), np.array([np.inf])
-    indexes = np.argsort(scores)[::-1]
-    sorted_scores = scores[indexes]
-    sorted_classification = classification[indexes]
-    max_size = np.unique(scores).shape[0] + 1
-    precision = np.zeros(max_size)
-    recall = np.zeros(max_size)
-    thresholds = np.zeros(max_size)
-    precision[0] = 1.0
-    thresholds[0] = np.inf
-
-    true_count = np.sum(classification == 1)
-    false_count = np.sum(classification == 0)
-    true_false_ratio = 1.0 if false_count == 0 else true_count / false_count
-    true_positive = 0
-    false_positive = 0
-    position = 1
-    score = sorted_scores[0]
-    for index in range(len(scores)):
-        if sorted_classification[index] == 1:
-            true_positive += 1
-        else:
-            false_positive += 1
-        if index == len(scores) - 1 or score != sorted_scores[index + 1]:
-            thresholds[position] = sorted_scores[index]
-            precision[position] = true_positive / (
-                true_positive + true_false_ratio * false_positive
-            )
-            recall[position] = 0.0 if true_count == 0 else true_positive / true_count
-            position += 1
-            if index < len(scores) - 1:
-                score = sorted_scores[index + 1]
-    return precision[:position], recall[:position], thresholds[:position]
-
-
-@njit(cache=True)
-def roc_curve(classification, scores):
-    """ROC curve with score ties aggregated before integration."""
-    if len(scores) == 0:
-        return np.array([0.0]), np.array([0.0]), np.array([np.inf])
-    indexes = np.argsort(scores)[::-1]
-    sorted_scores = scores[indexes]
-    sorted_classification = classification[indexes]
-    max_size = np.unique(scores).shape[0] + 1
-    tpr = np.zeros(max_size)
-    fpr = np.zeros(max_size)
-    thresholds = np.zeros(max_size)
-    thresholds[0] = np.inf
-    true_count = np.sum(classification == 1)
-    false_count = np.sum(classification == 0)
-    true_positive = 0
-    false_positive = 0
-    position = 1
-    score = sorted_scores[0]
-    for index in range(len(scores)):
-        if sorted_classification[index] == 1:
-            true_positive += 1
-        else:
-            false_positive += 1
-        if index == len(scores) - 1 or score != sorted_scores[index + 1]:
-            thresholds[position] = sorted_scores[index]
-            tpr[position] = 0.0 if true_count == 0 else true_positive / true_count
-            fpr[position] = 0.0 if false_count == 0 else false_positive / false_count
-            position += 1
-            if index < len(scores) - 1:
-                score = sorted_scores[index + 1]
-    return tpr[:position], fpr[:position], thresholds[:position]
-
-
-@njit(cache=True)
-def compute_aucs(classification, scores):
-    """Return ROC AUC and ESDEG's prevalence-adjusted PR AUC."""
-    tpr, fpr, _ = roc_curve(classification, scores)
-    auc_roc = np.trapezoid(tpr, x=fpr)
-    precision, recall, _ = precision_recall_curve(classification, scores)
-    auc_prc = np.trapezoid(precision, x=recall)
-    return auc_roc, auc_prc
-
-
-@njit(cache=True)
-def permutation_loop(all_labels, all_scores, n_permutations, seed):
-    """Run an upper-tail permutation loop with a private Numba RNG seed."""
-    np.random.seed(seed)
-    n_samples = len(all_labels)
-    order = np.argsort(all_scores)[::-1]
-    group_end = np.empty(n_samples, dtype=np.bool_)
-    for index in range(n_samples - 1):
-        group_end[index] = all_scores[order[index]] != all_scores[order[index + 1]]
-    group_end[-1] = True
-    n_foreground = np.sum(all_labels == 1)
-    n_background = np.sum(all_labels == 0)
-    false_weight = 1.0 if n_background == 0 else n_foreground / n_background
-    permuted_auc_roc = np.empty(n_permutations, dtype=np.float32)
-    permuted_auc_prc = np.empty(n_permutations, dtype=np.float32)
-    shuffled_labels = all_labels.copy()
-    for permutation in range(n_permutations):
-        for index in range(n_samples - 1, 0, -1):
-            swap = np.random.randint(0, index + 1)
-            shuffled_labels[index], shuffled_labels[swap] = (
-                shuffled_labels[swap],
-                shuffled_labels[index],
-            )
-        true_positive = 0
-        false_positive = 0
-        previous_tpr = 0.0
-        previous_fpr = 0.0
-        previous_precision = 1.0
-        auc_roc = 0.0
-        auc_prc = 0.0
-        for index in range(n_samples):
-            if shuffled_labels[order[index]] == 1:
-                true_positive += 1
-            else:
-                false_positive += 1
-            if group_end[index]:
-                tpr = 0.0 if n_foreground == 0 else true_positive / n_foreground
-                fpr = 0.0 if n_background == 0 else false_positive / n_background
-                precision = true_positive / (true_positive + false_weight * false_positive)
-                auc_roc += (fpr - previous_fpr) * (tpr + previous_tpr) / 2
-                auc_prc += (tpr - previous_tpr) * (precision + previous_precision) / 2
-                previous_tpr = tpr
-                previous_fpr = fpr
-                previous_precision = precision
-        permuted_auc_roc[permutation] = auc_roc
-        permuted_auc_prc[permutation] = auc_prc
-    return permuted_auc_roc, permuted_auc_prc
-
-
-def permutation_test(
-    foreground_scores: np.ndarray,
-    background_scores: np.ndarray,
-    n_permutations: int = 10000,
-    seed: int = 0,
-    random_state: int | None = None,
-) -> PermutationResult:
-    """Calculate AUCs and one-sided upper-tail permutation p-values."""
-    if random_state is not None:
-        seed = random_state
-    if isinstance(n_permutations, bool) or n_permutations < 1:
-        raise ValueError("n_permutations must be at least 1.")
+    The AUC is the Mann-Whitney statistic U / (n1 * n2). The p-value is the upper tail of its
+    normal approximation with tie and continuity corrections, used for every group size.
+    """
     foreground_scores = np.asarray(foreground_scores, dtype=np.float64)
     background_scores = np.asarray(background_scores, dtype=np.float64)
-    if foreground_scores.ndim != 1 or background_scores.ndim != 1:
-        raise ValueError("foreground_scores and background_scores must be one-dimensional.")
-    if not foreground_scores.size or not background_scores.size:
+    if foreground_scores.ndim != 2 or background_scores.ndim != 2:
+        raise ValueError("score matrices must be two-dimensional.")
+    if foreground_scores.shape[1] != background_scores.shape[1]:
+        raise ValueError("score matrices must have the same number of columns.")
+    if not foreground_scores.shape[0] or not background_scores.shape[0]:
         raise ValueError("foreground and background groups must both be non-empty.")
     if not np.all(np.isfinite(foreground_scores)) or not np.all(np.isfinite(background_scores)):
         raise ValueError("scores must be finite.")
-    if not isinstance(seed, (int, np.integer)) or seed < 0:
-        raise ValueError("seed must be a non-negative integer.")
-
-    all_scores = np.concatenate((foreground_scores, background_scores))
-    all_labels = np.concatenate(
-        (
-            np.ones(foreground_scores.size, dtype=np.float64),
-            np.zeros(background_scores.size, dtype=np.float64),
-        )
+    result = mannwhitneyu(
+        foreground_scores,
+        background_scores,
+        alternative="greater",
+        use_continuity=True,
+        method="asymptotic",
+        axis=0,
     )
-    observed_auc_roc, observed_auc_prc = compute_aucs(all_labels, all_scores)
-    permuted_auc_roc, permuted_auc_prc = permutation_loop(
-        all_labels, all_scores, int(n_permutations), int(seed) % (2**32)
-    )
-    return PermutationResult(
-        auc_roc=float(observed_auc_roc),
-        auc_prc=float(observed_auc_prc),
-        p_value_roc=float(
-            (np.count_nonzero(permuted_auc_roc >= observed_auc_roc) + 1) / (n_permutations + 1)
-        ),
-        p_value_prc=float(
-            (np.count_nonzero(permuted_auc_prc >= observed_auc_prc) + 1) / (n_permutations + 1)
-        ),
-    )
-
-
-def process_single_motif(args) -> dict:
-    motif_data, foreground, background, n_permutations, seed = args
-    motif_id = motif_data["motif_id"]
-    try:
-        result = permutation_test(foreground, background, n_permutations, seed=seed)
-    except Exception as exc:
-        raise RuntimeError(f"Permutation failed for motif_id {motif_id}: {exc}") from exc
-    return {
-        "motif_id": motif_id,
-        "tf_name": motif_data["tf_name"],
-        "tf_class": motif_data["tf_class"],
-        "tf_family": motif_data["tf_family"],
-        "auc_roc": result.auc_roc,
-        "auc_prc": result.auc_prc,
-        "p_value_roc": result.p_value_roc,
-        "p_value_prc": result.p_value_prc,
-    }
-
-
-def parallel_permutation_runner(
-    motifs: list[dict],
-    foreground_scores: np.ndarray,
-    background_scores: np.ndarray,
-    n_permutations: int = 10000,
-    n_workers: int = 1,
-    seeds: list[int] | None = None,
-) -> list[dict]:
-    """Run one independently seeded permutation stream per motif."""
-    if isinstance(n_workers, bool) or n_workers < 1:
-        raise ValueError("nproc must be at least 1.")
-    if n_permutations < 1:
-        raise ValueError("n_permutations must be at least 1.")
-    if foreground_scores.ndim != 2 or background_scores.ndim != 2:
-        raise ValueError("score matrices must be two-dimensional.")
-    if foreground_scores.shape[1] != len(motifs) or background_scores.shape[1] != len(motifs):
-        raise ValueError("score matrix columns must match motif count.")
-    if seeds is None:
-        seeds = list(range(len(motifs)))
-    if len(seeds) != len(motifs):
-        raise ValueError("one RNG seed is required per motif.")
-    if not motifs:
-        return []
-
-    args = [
-        (
-            motif,
-            foreground_scores[:, index],
-            background_scores[:, index],
-            n_permutations,
-            seeds[index],
-        )
-        for index, motif in enumerate(motifs)
-    ]
-    workers = min(int(n_workers), os.cpu_count() or 1, len(args))
-    if workers == 1:
-        return [process_single_motif(item) for item in args]
-
-    results = []
-    with ProcessPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(process_single_motif, item): item[0]["motif_id"] for item in args
-        }
-        try:
-            for future in as_completed(futures):
-                results.append(future.result())
-        except Exception as exc:
-            for future in futures:
-                future.cancel()
-            motif_id = futures.get(future, "unknown")
-            if "motif_id" in str(exc):
-                raise
-            raise RuntimeError(f"Permutation failed for motif_id {motif_id}: {exc}") from exc
-    return results
+    auc = result.statistic / (foreground_scores.shape[0] * background_scores.shape[0])
+    # Columns with all scores equal have zero variance and no evidence of enrichment.
+    pvalues = np.where(np.isnan(result.pvalue), 1.0, result.pvalue)
+    return auc, pvalues
 
 
 def _validate_deg_table(df: pd.DataFrame) -> pd.DataFrame:
@@ -482,24 +269,19 @@ def esdeg(
     taxon: str = "human",
     path_to_promoters: str | None = None,
     path_to_data: str | None = None,
-    nproc: int = 4,
     type_of_data: str = "deg",
     condition: str = "all",
     log2fc_thr_deg: float = 1.0,
     log2fc_thr_background: float = np.log2(5 / 4),
     padj_thr: float = 0.05,
-    n_permutations: int = 10000,
     match_ratio: int = 5,
     seed: int = 0,
     model_paths=None,
+    background_path: str | None = None,
 ) -> pd.DataFrame:
     """Run motif enrichment on a DEG table or a gene set."""
     if path_to_promoters is None or path_to_data is None:
         raise ValueError("path_to_promoters and path_to_data are required.")
-    if nproc < 1:
-        raise ValueError("nproc must be at least 1.")
-    if n_permutations < 1:
-        raise ValueError("n_permutations must be at least 1.")
     if not isinstance(seed, (int, np.integer)) or seed < 0:
         raise ValueError("seed must be a non-negative integer.")
     if type_of_data not in {"deg", "set"}:
@@ -540,44 +322,48 @@ def esdeg(
     if background_pool_idx.size == 0:
         raise ValueError("Background pool does not intersect the FASTA promoter IDs.")
     logger.info(
-        "Input: seed=%d, n_permutations=%d, match_ratio=%d, models=%d, "
+        "Input: seed=%d, match_ratio=%d, models=%d, "
         "foreground=%d, background_pool=%d",
         seed,
-        n_permutations,
         match_ratio,
         len(motifs),
         foreground_idx.size,
         background_pool_idx.size,
     )
 
-    gc_content = calculate_gc(sequences)
-    foreground_gc = gc_content[foreground_idx]
-    background_pool_gc = gc_content[background_pool_idx]
-    streams = np.random.SeedSequence(int(seed)).spawn(len(motifs) + 1)
-    gc_seed = int(streams[0].generate_state(1, dtype=np.uint32)[0])
-    selected_bg_idx = select_gc_matched_background(
-        foreground_gc, background_pool_gc, match_ratio=match_ratio, random_state=gc_seed
+    features = np.column_stack((calculate_gc(sequences), calculate_cpg_log_oe(sequences)))
+    selected_bg_idx = select_matched_background(
+        features[foreground_idx],
+        features[background_pool_idx],
+        match_ratio=match_ratio,
+        random_state=int(seed),
+        feature_names=("GC", "log2 CpG o/e"),
     )
-    selected_idx = np.concatenate((foreground_idx, background_pool_idx[selected_bg_idx]))
+    background_idx = background_pool_idx[selected_bg_idx]
+    if background_path is not None:
+        pd.DataFrame({"id": np.asarray(ids)[background_idx]}).to_csv(
+            background_path, sep="\t", index=False
+        )
+    selected_idx = np.concatenate((foreground_idx, background_idx))
     selected_sequences = mimosa.EncodedSequences.from_rows(
         sequences[index] for index in selected_idx
     )
     scores = process_all_models(selected_sequences, motifs)
-    foreground_scores = scores[: foreground_idx.size]
-    background_scores = scores[foreground_idx.size :]
-    motif_seeds = [int(stream.generate_state(1, dtype=np.uint32)[0]) for stream in streams[1:]]
-    results = parallel_permutation_runner(
-        motifs,
-        foreground_scores,
-        background_scores,
-        n_permutations=n_permutations,
-        n_workers=nproc,
-        seeds=motif_seeds,
+    auc_roc, p_value_roc = mann_whitney_enrichment(
+        scores[: foreground_idx.size], scores[foreground_idx.size :]
     )
 
-    result = pd.DataFrame(results)
+    result = pd.DataFrame(
+        {
+            "motif_id": [motif["motif_id"] for motif in motifs],
+            "tf_name": [motif["tf_name"] for motif in motifs],
+            "tf_class": [motif["tf_class"] for motif in motifs],
+            "tf_family": [motif["tf_family"] for motif in motifs],
+            "auc_roc": auc_roc,
+            "p_value_roc": p_value_roc,
+        }
+    )
     result["p_value_roc_adj"] = _adjust_pvalues(result["p_value_roc"])
-    result["p_value_prc_adj"] = _adjust_pvalues(result["p_value_prc"])
     if motif_db == "jaspar" and not model_paths:
         cluster_path = resources.files("esdeg").joinpath(f"clusters/{taxon}.tsv")
         result["jaspar_cluster"] = result["motif_id"].map(get_motif_to_cluster(str(cluster_path)))

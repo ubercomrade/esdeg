@@ -1,12 +1,12 @@
 # ESDEG
 
-ESDEG is a Python command-line tool for testing transcription-factor motif enrichment in promoters of differentially expressed genes (DEGs) or an arbitrary gene set. It scans promoters with [Mimosa](https://github.com/ubercomrade/mimosa), compares foreground promoters with a GC-matched background, and reports AUC-based enrichment statistics with permutation p-values and FDR correction. Bundled HOCOMOCO v12 and JASPAR 2024 models are supported.
+ESDEG is a Python command-line tool for testing transcription-factor motif enrichment in promoters of differentially expressed genes (DEGs) or an arbitrary gene set. It scans promoters with [Mimosa](https://github.com/ubercomrade/mimosa), compares foreground promoters with a background matched on GC content and CpG depletion, and reports ROC AUC enrichment with analytical Mann–Whitney p-values and FDR correction. Bundled HOCOMOCO v12 and JASPAR 2024 models are supported.
 
 ## Background
 
 Transcription factors regulate gene expression by binding transcription-factor binding sites (TFBSs) in regulatory DNA. TFBSs are variable and are commonly represented by position weight matrices (PWMs). If a TF contributes to an expression response, its motif can be over-represented among promoters of response genes.
 
-Promoter GC content affects motif scores, especially for GC-rich or AT-rich motifs. ESDEG therefore compares a foreground with a GC-matched promoter background rather than with an arbitrary set of genes.
+Promoter GC content and CpG depletion affect motif scores, especially for GC-rich or CpG-containing motifs. ESDEG therefore compares a foreground with a promoter background matched on both, rather than with an arbitrary set of genes.
 
 ## Installation
 
@@ -36,7 +36,7 @@ uv run esdeg enrichment \
   example/E-MTAB-6598.degs.csv \
   enrichment.tsv \
   --motifs hocomoco \
-  --n-permutations 10000 --seed 0 --match-ratio 5
+  --seed 0 --match-ratio 5
 ```
 
 Test a one-ID-per-line gene set instead:
@@ -96,10 +96,9 @@ esdeg enrichment PROMOTERS INPUT OUTPUT [options]
 | `--pvalue` | `0.05` | Foreground DEG `padj` threshold. |
 | `--log2fc-deg` | `1.0` | Absolute foreground log2 fold-change threshold. |
 | `--log2fc-back` | `log2(5/4)` | Absolute background log2 fold-change ceiling. |
-| `--match-ratio` | `5` | Maximum background-to-foreground size ratio after GC matching. |
-| `--n-permutations` | `10000` | Permutations per motif. |
-| `--seed` | `0` | Reproducible seed for GC matching and permutations. |
-| `--nproc` | `4` | Worker processes across motifs. |
+| `--match-ratio` | `5` | Maximum background-to-foreground size ratio after matching. |
+| `--seed` | `0` | Reproducible seed for background matching. |
+| `--background-output PATH` | — | Write the IDs of the selected background promoters to a TSV. |
 | `--visualization PATH` | — | Write an interactive HTML scatter plot. |
 | `--report PATH` | — | Write an interactive HTML results table. |
 | `--xlsx PATH` | — | Write an XLSX table with available motif logos. |
@@ -108,22 +107,13 @@ esdeg enrichment PROMOTERS INPUT OUTPUT [options]
 
 For each motif, ESDEG scans every promoter on the best strand and retains the maximum PWM score across positions. A high score means that a promoter contains a stronger match to that motif.
 
-The background used for testing has at most `match-ratio × N_foreground` promoters. ESDEG allocates this sample across GC-content bins defined by foreground quantiles, samples without replacement within each bin, and fills any deficit with still-available promoters of the closest GC content. GC matching is performed once for the run.
+The background used for testing has at most `match-ratio × N_foreground` promoters. ESDEG describes every promoter by its GC fraction and by its log2 CpG observed/expected ratio, `log2((CG + 1) / (C·G / L + 1))`. Each foreground promoter in turn takes the nearest unused candidate from the background pool by Mahalanobis distance on these two features, and this repeats until the target size is reached, so no promoter is used twice. Matching is performed once for the run. The log reports the mean of each feature in the foreground, the pool, and the selected background, together with the standardized mean difference (SMD); a warning is issued when `|SMD| > 0.1`.
 
-For each motif, the foreground and selected background score distributions produce two effect sizes:
+For each motif, the foreground and selected background score distributions produce the effect size `auc_roc`, the ROC AUC. A value of `0.5` indicates no score separation; values above `0.5` indicate enrichment of high motif scores in the foreground. It equals the Mann–Whitney statistic `U / (N_foreground · N_background)`.
 
-- `auc_roc` is the ROC AUC. A value of `0.5` indicates no score separation; values above `0.5` indicate enrichment of high motif scores in the foreground.
-- `auc_prc` is a prevalence-adjusted precision-recall AUC. False positives are weighted by `N_foreground / N_background`, so the background-to-foreground ratio does not by itself determine precision.
+Significance is the one-sided (enrichment only) p-value of the Mann–Whitney test, from the normal approximation of `U` with tie and continuity corrections. The same method is used for every group size, so p-values for very small groups are approximate. The null hypothesis is that foreground and background scores come from the same distribution, so p-values are conditional on the selected background and are valid only to the extent that the background matches the foreground in promoter composition.
 
-Significance is evaluated independently for each motif by shuffling foreground/background labels while keeping all motif scores and group sizes fixed. With observed AUC \(A_{obs}\), \(B\) permutations, and permuted AUCs \(A_b\), the one-sided empirical p-value is:
-
-\[
-p = \frac{1 + \#\{b : A_b \ge A_{obs}\}}{B + 1}.
-\]
-
-The test is for enrichment of high scores, not depletion. With the default 10,000 permutations, the smallest possible unadjusted p-value is `1 / 10001` (about `1e-4`). The GC-matched background is fixed before label permutation, so p-values are conditional on that selected background.
-
-ESDEG applies the Benjamini–Hochberg procedure independently to ROC and PRC p-values across all tested motifs. The enrichment TSV contains every motif; it does not automatically remove non-significant results. The optional plot displays motifs with `p_value_roc_adj < 0.05`.
+ESDEG applies the Benjamini–Hochberg procedure across all tested motifs. The enrichment TSV contains every motif; it does not automatically remove non-significant results. The optional plot displays motifs with `p_value_roc_adj < 0.05`.
 
 ## Results
 
@@ -133,9 +123,9 @@ The enrichment TSV is sorted by decreasing `auc_roc` and contains:
 | --- | --- |
 | `motif_id` | Motif model identifier. |
 | `tf_name`, `tf_class`, `tf_family` | Motif annotation. |
-| `auc_roc`, `auc_prc` | ROC and prevalence-adjusted PR AUC effect sizes. |
-| `p_value_roc`, `p_value_prc` | One-sided permutation p-values. |
-| `p_value_roc_adj`, `p_value_prc_adj` | Benjamini–Hochberg adjusted p-values. |
+| `auc_roc` | ROC AUC effect size. |
+| `p_value_roc` | One-sided Mann–Whitney p-value. |
+| `p_value_roc_adj` | Benjamini–Hochberg adjusted p-value. |
 | `jaspar_cluster` | JASPAR motif cluster, included only for bundled JASPAR runs. |
 
 ## Expression annotation

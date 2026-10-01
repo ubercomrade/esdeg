@@ -48,9 +48,10 @@ def parse_args(argv=None):
         "-L", "--log2fc-back", "--log2fc_back", type=float, default=0.32192809488736235
     )
     enrichment.add_argument("--match-ratio", type=int, default=5)
-    enrichment.add_argument("--n-permutations", type=int, default=10000)
     enrichment.add_argument("--seed", type=int, default=0)
-    enrichment.add_argument("-p", "--nproc", type=int, default=4)
+    enrichment.add_argument(
+        "--background-output", default=None, help="Path to a TSV of selected background IDs."
+    )
     _common_outputs(enrichment)
     enrichment.add_argument("-R", "--report", default=None, help="Path to an HTML table report.")
 
@@ -82,16 +83,15 @@ def main_cli(argv=None):
             taxon,
             args.promoters,
             args.input,
-            args.nproc,
             type_of_data=args.format,
             condition=args.regulated,
             log2fc_thr_deg=args.log2fc_deg,
             log2fc_thr_background=args.log2fc_back,
             padj_thr=args.pvalue,
-            n_permutations=args.n_permutations,
             match_ratio=args.match_ratio,
             seed=args.seed,
             model_paths=args.model_paths,
+            background_path=args.background_output,
         )
         if args.visualization is not None:
             create_picture(result, args.visualization)

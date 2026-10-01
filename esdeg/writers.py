@@ -78,7 +78,6 @@ def write_report(df: pd.DataFrame, taxon: str, path_to_output) -> None:
             "tf_family",
             "auc_roc",
             "p_value_roc_adj",
-            "p_value_prc_adj",
         }
     ]
     report = df.loc[:, columns].copy()

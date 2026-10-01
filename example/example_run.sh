@@ -20,8 +20,7 @@ $promoters \
 --visualization ./stat_irf.montecarlo.all.html \
 --report ./stat_irf.montecarlo.all.report.html \
 --xlsx ./stat_irf.montecarlo.all.report.xlsx \
---regulated all \
---nproc 8
+--regulated all
 
 
 time uv run esdeg enrichment \
@@ -33,8 +32,7 @@ $promoters \
 --visualization ./stat_irf.montecarlo.up.report.html \
 --report ./stat_irf.montecarlo.up.report.html \
 --xlsx ./stat_irf.montecarlo.up.report.xlsx \
---regulated up \
---nproc 8
+--regulated up
 
 
 time uv run esdeg enrichment \
@@ -45,8 +43,7 @@ $promoters \
 -m hocomoco \
 --visualization ./nfkb1.montecarlo.set.report.html \
 --report ./nfkb1.montecarlo.set.report.html \
---xlsx ./nfkb1.montecarlo.set.report.xlsx \
---nproc 8
+--xlsx ./nfkb1.montecarlo.set.report.xlsx
 
 # time ESDEG annotation \
 # ./stat_irf.montecarlo.enrichment.tsv \
