@@ -1,0 +1,68 @@
+name: Build distribution
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint and tests
+    uses: ./.github/workflows/test.yml
+
+  build_dist:
+    name: Build distribution artifacts
+    needs: [checks]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Verify release tag version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          project_version="$(uv version --short)"
+          test "$tag_version" = "$project_version" || {
+            echo "Tag version $tag_version does not match project version $project_version."
+            exit 1
+          }
+
+      - name: Build wheel and sdist
+        run: uv build
+
+      - name: Check distribution metadata
+        run: uvx twine check dist/*
+
+      - name: Test wheel installation and bundled resources
+        run: |
+          uv venv --python ${{ matrix.python-version }} wheel_env
+          source wheel_env/bin/activate
+          uv pip install dist/*.whl
+          esdeg --help
+          esdeg enrichment example/promoters.p400m100.fa example/E-MTAB-6598.degs.csv \
+            "$RUNNER_TEMP/wheel.tsv" -f deg -m hocomoco --seed 1 -R "$RUNNER_TEMP/wheel.html"
+          test -s "$RUNNER_TEMP/wheel.tsv"
+
+      - name: Test sdist installation
+        run: |
+          uv venv --python ${{ matrix.python-version }} sdist_env
+          source sdist_env/bin/activate
+          uv pip install dist/*.tar.gz
+          esdeg --help
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.13'
+        with:
+          name: dist
+          path: dist/*

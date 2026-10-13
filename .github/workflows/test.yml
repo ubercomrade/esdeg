@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - name: Lint with ruff
+        run: |
+          uv sync --locked --group dev
+          uv run ruff check .
+
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+      - name: Run pytest
+        run: uv run pytest -q
+      - name: Smoke run on example data
+        run: |
+          uv run esdeg enrichment example/promoters.p400m100.fa \
+            example/E-MTAB-6598.degs.csv "$RUNNER_TEMP/enrichment.tsv" \
+            -f deg -m hocomoco --seed 1 \
+            -x "$RUNNER_TEMP/enrichment.xlsx" -R "$RUNNER_TEMP/enrichment.html"
+          test -s "$RUNNER_TEMP/enrichment.tsv"
