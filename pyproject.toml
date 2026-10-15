@@ -34,6 +34,9 @@ esdeg = "esdeg.cli:main_cli"
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["esdeg*"]
+
 [tool.setuptools.package-data]
 esdeg = ["clusters/*.tsv", "hocomoco/*.jsonl", "logos/**/*.png"]
 
