@@ -76,8 +76,9 @@ def write_report(df: pd.DataFrame, taxon: str, path_to_output) -> None:
             "tf_name",
             "tf_class",
             "tf_family",
-            "auc_roc",
-            "p_value_roc_adj",
+            "auprc",
+            "auroc",
+            "p_value_auprc_adj",
         }
     ]
     report = df.loc[:, columns].copy()
@@ -93,27 +94,27 @@ def write_report(df: pd.DataFrame, taxon: str, path_to_output) -> None:
 
 
 def create_picture(df: pd.DataFrame, path_to_output, threshold: float = 0.05):
-    """Write an AUC versus adjusted-p-value report, including the empty case."""
+    """Write an auPRC versus adjusted-p-value report, including the empty case."""
     if threshold <= 0:
         raise ValueError("threshold must be positive.")
     plot = df.copy()
-    pvalues = np.clip(plot["p_value_roc_adj"].astype(float), np.finfo(float).tiny, 1.0)
-    plot["-log10(p_value_roc_adj)"] = -np.log10(pvalues)
-    significant = plot[plot["p_value_roc_adj"] < threshold]
+    pvalues = np.clip(plot["p_value_auprc_adj"].astype(float), np.finfo(float).tiny, 1.0)
+    plot["-log10(p_value_auprc_adj)"] = -np.log10(pvalues)
+    significant = plot[plot["p_value_auprc_adj"] < threshold]
     if significant.empty:
         significant = pd.DataFrame(
-            columns=["-log10(p_value_roc_adj)", "auc_roc", "tf_class", "tf_name"]
+            columns=["-log10(p_value_auprc_adj)", "auprc", "tf_class", "tf_name"]
         )
     figure = px.scatter(
         significant,
-        y="auc_roc",
-        x="-log10(p_value_roc_adj)",
+        y="auprc",
+        x="-log10(p_value_auprc_adj)",
         color="tf_class",
         symbol="tf_name",
         range_y=[0, 1],
     )
     figure.add_vline(x=-np.log10(threshold), line_dash="dash", line_color="green")
-    if plot[plot["p_value_roc_adj"] < threshold].empty:
+    if plot[plot["p_value_auprc_adj"] < threshold].empty:
         figure.add_annotation(
             text="No significant motifs", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False
         )
@@ -121,7 +122,7 @@ def create_picture(df: pd.DataFrame, path_to_output, threshold: float = 0.05):
         font_family="Courier New",
         font_size=16,
         legend_title="TF class, TF name",
-        yaxis_title="ROC AUC",
+        yaxis_title="auPRC",
         xaxis_title="-log10(adjusted p-value)",
     )
     figure.write_html(path_to_output)

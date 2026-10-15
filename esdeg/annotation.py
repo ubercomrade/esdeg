@@ -1,4 +1,4 @@
-"""Expression annotation for AUC-based enrichment results."""
+"""Expression annotation for auPRC-based enrichment results."""
 
 from __future__ import annotations
 
@@ -69,16 +69,24 @@ def _expand_dimers(table: pd.DataFrame) -> pd.DataFrame:
 
 def read_esdeg_table(esdeg_path):
     table = read_table(esdeg_path)
-    required = {"motif_id", "tf_name", "tf_class", "tf_family", "auc_roc", "p_value_roc_adj"}
+    required = {
+        "motif_id",
+        "tf_name",
+        "tf_class",
+        "tf_family",
+        "auprc",
+        "auroc",
+        "p_value_auprc_adj",
+    }
     missing = sorted(required - set(table.columns))
     if missing:
         raise ValueError(f"Enrichment table is missing required columns: {', '.join(missing)}.")
-    for column in ("auc_roc", "p_value_roc_adj"):
+    for column in ("auprc", "auroc", "p_value_auprc_adj"):
         numeric = pd.to_numeric(table[column], errors="coerce")
         if numeric.isna().any():
             raise ValueError(f"Enrichment column {column!r} must be numeric.")
         table[column] = numeric
-    table["me_padj"] = table["p_value_roc_adj"]
+    table["me_padj"] = table["p_value_auprc_adj"]
     table = table[table["tf_name"].astype(str).str.upper().ne("NA")].copy()
     table = table[table["tf_family"].astype(str).str.upper().ne("NA")]
     return _expand_dimers(table)
@@ -127,9 +135,9 @@ def annotation(
     de_padj_thr=0.05,
     lfc_thr=1.0,
     counts_filter=5.0,
-    min_auc=0.5,
+    min_auroc=0.5,
 ):
-    """Add expression columns and optionally filter AUC enrichment results."""
+    """Add expression columns and optionally filter auROC enrichment results."""
     id_to_name = create_gname_converter(gtf_path)
     table = read_esdeg_table(esdeg_path)
     counts_map, deg_map = _expression_maps(deg_path, counts_path, id_to_name)
@@ -141,7 +149,7 @@ def annotation(
     table["de_padj"] = table["tf_name"].map(lambda name: deg_map.get(name, {}).get("padj", np.nan))
 
     if filter_flag:
-        motif_mask = (table["p_value_roc_adj"] < me_padj_thr) & (table["auc_roc"] >= min_auc)
+        motif_mask = (table["p_value_auprc_adj"] < me_padj_thr) & (table["auroc"] >= min_auroc)
         expression_mask = ((table["de_padj"] < de_padj_thr) & (table["lfc"].abs() >= lfc_thr)) | (
             table["counts"] >= counts_filter
         )
@@ -149,7 +157,7 @@ def annotation(
 
     if best_flag:
         table = table.sort_values(
-            ["tf_name", "p_value_roc_adj", "auc_roc", "motif_id"],
+            ["tf_name", "p_value_auprc_adj", "auprc", "motif_id"],
             ascending=[True, True, False, True],
             kind="mergesort",
         ).drop_duplicates("tf_name", keep="first")

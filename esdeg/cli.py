@@ -47,7 +47,8 @@ def parse_args(argv=None):
     enrichment.add_argument(
         "-L", "--log2fc-back", "--log2fc_back", type=float, default=0.32192809488736235
     )
-    enrichment.add_argument("--match-ratio", type=int, default=3)
+    enrichment.add_argument("--match-ratio", type=int, default=5)
+    enrichment.add_argument("--n-permutations", type=int, default=100_000)
     enrichment.add_argument("--seed", type=int, default=0)
     enrichment.add_argument(
         "--background-output", default=None, help="Path to a TSV of selected background IDs."
@@ -65,7 +66,7 @@ def parse_args(argv=None):
     annotated.add_argument("-b", "--best", action="store_true")
     annotated.add_argument("-f", "--filter", action="store_true", dest="filter_flag")
     annotated.add_argument("-m", "--me-padj", "--me_padj", type=float, default=0.05)
-    annotated.add_argument("--min-auc", type=float, default=0.5)
+    annotated.add_argument("--min-auroc", "--min-auc", type=float, default=0.5, dest="min_auroc")
     annotated.add_argument("-d", "--de-padj", "--de_padj", type=float, default=0.05)
     annotated.add_argument("-L", "--log-fc", "--log_fc", type=float, default=1.0)
     annotated.add_argument("-n", "--ncounts", type=float, default=5.0)
@@ -90,6 +91,7 @@ def main_cli(argv=None):
             padj_thr=args.pvalue,
             match_ratio=args.match_ratio,
             seed=args.seed,
+            n_permutations=args.n_permutations,
             model_paths=args.model_paths,
             background_path=args.background_output,
         )
@@ -112,7 +114,7 @@ def main_cli(argv=None):
             de_padj_thr=args.de_padj,
             lfc_thr=args.log_fc,
             counts_filter=args.ncounts,
-            min_auc=args.min_auc,
+            min_auroc=args.min_auroc,
         )
         if args.xlsx is not None:
             write_xlsx_ann(result, "vertebrates", args.xlsx)

@@ -2,38 +2,39 @@ import mimosa
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.stats import mannwhitneyu
 
 from esdeg.annotation import _expand_dimers
 from esdeg.functions import (
     calculate_cpg_log_oe,
     calculate_gc,
     esdeg,
-    mann_whitney_enrichment,
     process_all_models,
     select_matched_background,
 )
 from esdeg.parsers import read_table
+from esdeg.permutation import _shared_null, _upper_tail, permutation_enrichment
 
 
 def test_matching_is_unique_reproducible_and_close():
     rng = np.random.default_rng(0)
     pool = rng.normal(size=(500, 2))
     foreground = rng.normal(loc=1.0, scale=0.3, size=(20, 2))
-    first = select_matched_background(foreground, pool, 5, random_state=7)
-    second = select_matched_background(foreground, pool, 5, random_state=7)
-    assert np.array_equal(first, second)
+    first, first_owner = select_matched_background(foreground, pool, 5, random_state=7)
+    second, second_owner = select_matched_background(foreground, pool, 5, random_state=7)
+    assert np.array_equal(first, second) and np.array_equal(first_owner, second_owner)
     assert len(first) == len(np.unique(first))
+    assert np.array_equal(np.bincount(first_owner, minlength=20), np.full(20, len(first) // 20))
     assert len(first) % 20 == 0 and 20 <= len(first) <= 100
     assert np.all(pool[first].mean(axis=0) > pool.mean(axis=0))
-    assert len(select_matched_background(foreground, pool[:10], 1, random_state=7)) == 10
+    partial, partial_owner = select_matched_background(foreground, pool[:10], 1, random_state=7)
+    assert len(partial) == len(partial_owner) == 10
 
 
 def test_matching_lowers_ratio_when_background_is_unbalanced():
     rng = np.random.default_rng(0)
     pool = np.vstack((rng.normal(size=(400, 2)), rng.normal(loc=3.0, size=(40, 2))))
     foreground = rng.normal(loc=3.0, size=(20, 2))
-    result = select_matched_background(foreground, pool, 5, random_state=1)
+    result, _ = select_matched_background(foreground, pool, 5, random_state=1)
     assert len(result) % 20 == 0 and len(result) < 100
     assert np.abs(pool[result].mean(axis=0) - foreground.mean(axis=0)).max() < 0.5
 
@@ -48,25 +49,69 @@ def test_cpg_log_oe_does_not_cross_sequence_boundaries():
     np.testing.assert_allclose(calculate_cpg_log_oe(sequences), expected)
 
 
-def test_mann_whitney_matches_scipy_with_ties_and_is_one_sided():
-    rng = np.random.default_rng(1)
-    foreground = np.round(rng.normal(0.4, 1.0, size=(40, 3)), 1)
-    background = np.round(rng.normal(0.0, 1.0, size=(200, 3)), 1)
-    auc, pvalue = mann_whitney_enrichment(foreground, background)
+def _reference_ap_auc(foreground, background):
+    """Average precision and auROC of one column by the textbook definitions (no ties)."""
+    scores = np.concatenate((foreground, background))
+    labels = np.concatenate((np.ones(len(foreground)), np.zeros(len(background))))
+    ranked = labels[np.argsort(-scores)]
+    hits = np.cumsum(ranked)
+    ap = np.sum(ranked * hits / np.arange(1, len(ranked) + 1)) / len(foreground)
+    auc = np.mean(foreground[:, None] > background[None, :])
+    return ap, auc
+
+
+def test_ap_enrichment_matches_definitions_and_is_reproducible():
+    rng = np.random.default_rng(3)
+    foreground = rng.normal(size=(40, 3)) + np.array([0.0, 0.8, -0.8])
+    background = rng.normal(size=(80, 3))
+    matched_to = np.tile(np.arange(40), 2)
+    args = (foreground, background, matched_to)
+    first = permutation_enrichment(*args, n_permutations=20_000, seed=5)
+    second = permutation_enrichment(*args, n_permutations=20_000, seed=5)
+    for a, b in zip(first, second, strict=True):
+        np.testing.assert_array_equal(a, b)
+    auprc, auc, pvalue, roc_pvalue = first
     for column in range(3):
-        expected = mannwhitneyu(
-            foreground[:, column], background[:, column], alternative="greater"
-        )
-        assert auc[column] == pytest.approx(expected.statistic / (40 * 200))
-        assert pvalue[column] == pytest.approx(expected.pvalue)
-    _, depleted_p = mann_whitney_enrichment(background[:40, :1], foreground[:, :1])
-    assert depleted_p[0] > 0.5
-    perfect_auc, perfect_p = mann_whitney_enrichment(
-        np.array([[4.0], [3.0]]), np.array([[2.0], [1.0]])
+        ap, expected_auc = _reference_ap_auc(foreground[:, column], background[:, column])
+        assert auprc[column] == pytest.approx(ap)
+        assert auc[column] == pytest.approx(expected_auc)
+    assert pvalue[1] < 0.01
+    assert pvalue[2] > 0.5
+    assert pvalue.min() >= 1 / 20_001
+    assert roc_pvalue[1] < 0.01 and roc_pvalue[2] > 0.5
+
+
+def test_ap_enrichment_handles_perfect_constant_and_tied_columns():
+    foreground = np.column_stack((np.arange(30, 40.0), np.ones(10), np.repeat([1.0, 2.0], 5)))
+    background = np.column_stack((np.arange(0, 20.0), np.ones(20), np.tile([1.0, 2.0], 10)))
+    matched_to = np.tile(np.arange(10), 2)
+    auprc, auc, pvalue, roc_pvalue = permutation_enrichment(
+        foreground, background, matched_to, 5_000, seed=1
     )
-    assert perfect_auc[0] == 1.0 and perfect_p[0] < 0.5
-    constant_auc, constant_p = mann_whitney_enrichment(np.ones((3, 1)), np.ones((6, 1)))
-    assert constant_auc[0] == 0.5 and constant_p[0] == 1.0
+    assert auprc[0] == 1.0 and auc[0] == 1.0
+    assert pvalue[0] < 1e-3 and roc_pvalue[0] < 1e-3
+    assert auprc[1] == pytest.approx(10 / 30) and auc[1] == 0.5
+    assert pvalue[1] == 1.0 and roc_pvalue[1] == 1.0
+    assert auc[2] == pytest.approx(0.5) and 0.05 < pvalue[2] <= 1.0
+    with pytest.raises(ValueError, match="matched_to"):
+        permutation_enrichment(foreground, background, np.zeros(19, dtype=int), 100)
+
+
+def test_paired_calibration_keeps_the_false_positive_rate_under_matched_null():
+    rng = np.random.default_rng(11)
+    n_groups, n_columns = 40, 300
+    group_effect = rng.normal(scale=3.0, size=(n_groups, n_columns))
+    first = group_effect + rng.normal(size=group_effect.shape)
+    second = group_effect + rng.normal(size=group_effect.shape)
+    swap = rng.random((n_groups, n_columns)) < 0.5  # which member of a pair is the foreground
+    foreground = np.where(swap, first, second)
+    background = np.where(swap, second, first)
+    _, _, pvalue, roc_pvalue = permutation_enrichment(
+        foreground, background, np.arange(n_groups), 20_000, seed=2
+    )
+    for values in (pvalue, roc_pvalue):
+        assert 0.02 < np.mean(values < 0.05) < 0.09
+        assert 0.4 < values.mean() < 0.6
 
 
 def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeypatch):
@@ -104,7 +149,7 @@ def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeyp
             seed=9,
         )
         features = np.column_stack((calculate_gc(sequences), calculate_cpg_log_oe(sequences)))
-        selected = select_matched_background(features[:2], features[pool], ratio, 9)
+        selected, _ = select_matched_background(features[:2], features[pool], ratio, 9)
         expected_idx = np.concatenate((np.arange(2), pool[selected]))
         np.testing.assert_array_equal(
             process_all_models(scanned[-1], [motif]), full_scores[expected_idx]
@@ -144,3 +189,18 @@ def test_common_reader_accepts_csv_and_tsv(tmp_path):
     frame.to_csv(tsv_path, sep="\t", index=False)
     assert read_table(csv_path).equals(frame)
     assert read_table(tsv_path).equals(frame)
+
+
+def test_cornish_fisher_tail_matches_a_large_permutation_sample():
+    n_foreground, n_background = 60, 180
+    n = n_foreground + n_background
+    inverse = 1.0 / np.arange(1, n + 1)
+    large = np.empty((2_000_000, 2))
+    _shared_null(n, n_foreground, len(large), 1, inverse, large)
+    for column in range(2):
+        truth = np.sort(large[:, column])
+        small = large[:100_000, column]
+        for probability in (1e-1, 1e-2, 1e-3, 1e-4):
+            value = truth[len(truth) - round(probability * len(truth))]
+            exact = (len(truth) - np.searchsorted(truth, value)) / len(truth)
+            assert _upper_tail(small, [value])[0] == pytest.approx(exact, rel=0.5)
