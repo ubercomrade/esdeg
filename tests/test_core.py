@@ -49,15 +49,14 @@ def test_cpg_log_oe_does_not_cross_sequence_boundaries():
     np.testing.assert_allclose(calculate_cpg_log_oe(sequences), expected)
 
 
-def _reference_ap_auc(foreground, background):
-    """Average precision and auROC of one column by the textbook definitions (no ties)."""
+def _reference_ap(foreground, background):
+    """Average precision of one column by the textbook definitions (no ties)."""
     scores = np.concatenate((foreground, background))
     labels = np.concatenate((np.ones(len(foreground)), np.zeros(len(background))))
     ranked = labels[np.argsort(-scores)]
     hits = np.cumsum(ranked)
     ap = np.sum(ranked * hits / np.arange(1, len(ranked) + 1)) / len(foreground)
-    auc = np.mean(foreground[:, None] > background[None, :])
-    return ap, auc
+    return ap
 
 
 def test_ap_enrichment_matches_definitions_and_is_reproducible():
@@ -70,29 +69,25 @@ def test_ap_enrichment_matches_definitions_and_is_reproducible():
     second = permutation_enrichment(*args, n_permutations=20_000, seed=5)
     for a, b in zip(first, second, strict=True):
         np.testing.assert_array_equal(a, b)
-    auprc, auc, pvalue, roc_pvalue = first
+    auprc, pvalue = first
     for column in range(3):
-        ap, expected_auc = _reference_ap_auc(foreground[:, column], background[:, column])
+        ap = _reference_ap(foreground[:, column], background[:, column])
         assert auprc[column] == pytest.approx(ap)
-        assert auc[column] == pytest.approx(expected_auc)
     assert pvalue[1] < 0.01
     assert pvalue[2] > 0.5
     assert pvalue.min() >= 1 / 20_001
-    assert roc_pvalue[1] < 0.01 and roc_pvalue[2] > 0.5
 
 
 def test_ap_enrichment_handles_perfect_constant_and_tied_columns():
     foreground = np.column_stack((np.arange(30, 40.0), np.ones(10), np.repeat([1.0, 2.0], 5)))
     background = np.column_stack((np.arange(0, 20.0), np.ones(20), np.tile([1.0, 2.0], 10)))
     matched_to = np.tile(np.arange(10), 2)
-    auprc, auc, pvalue, roc_pvalue = permutation_enrichment(
-        foreground, background, matched_to, 5_000, seed=1
-    )
-    assert auprc[0] == 1.0 and auc[0] == 1.0
-    assert pvalue[0] < 1e-3 and roc_pvalue[0] < 1e-3
-    assert auprc[1] == pytest.approx(10 / 30) and auc[1] == 0.5
-    assert pvalue[1] == 1.0 and roc_pvalue[1] == 1.0
-    assert auc[2] == pytest.approx(0.5) and 0.05 < pvalue[2] <= 1.0
+    auprc, pvalue = permutation_enrichment(foreground, background, matched_to, 5_000, seed=1)
+    assert auprc[0] == 1.0
+    assert pvalue[0] < 1e-3
+    assert auprc[1] == pytest.approx(10 / 30)
+    assert pvalue[1] == 1.0
+    assert 0.05 < pvalue[2] <= 1.0
     with pytest.raises(ValueError, match="matched_to"):
         permutation_enrichment(foreground, background, np.zeros(19, dtype=int), 100)
 
@@ -106,12 +101,9 @@ def test_paired_calibration_keeps_the_false_positive_rate_under_matched_null():
     swap = rng.random((n_groups, n_columns)) < 0.5  # which member of a pair is the foreground
     foreground = np.where(swap, first, second)
     background = np.where(swap, second, first)
-    _, _, pvalue, roc_pvalue = permutation_enrichment(
-        foreground, background, np.arange(n_groups), 20_000, seed=2
-    )
-    for values in (pvalue, roc_pvalue):
-        assert 0.02 < np.mean(values < 0.05) < 0.09
-        assert 0.4 < values.mean() < 0.6
+    _, pvalue = permutation_enrichment(foreground, background, np.arange(n_groups), 20_000, seed=2)
+    assert 0.02 < np.mean(pvalue < 0.05) < 0.09
+    assert 0.4 < pvalue.mean() < 0.6
 
 
 def test_enrichment_scans_only_selected_promoters_and_checks_all_lengths(monkeypatch):

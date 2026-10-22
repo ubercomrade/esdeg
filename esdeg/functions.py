@@ -236,31 +236,15 @@ def _adjust_pvalues(pvalues) -> np.ndarray:
 
 
 def process_all_models(sequences, motifs) -> np.ndarray:
-    """Scan all motif records and return log(sum(exp(score))) over positions for each sequence.
-
-    PWM scores are natural-log likelihood ratios, so the sum is the expected number of sites
-    weighted by their strength; it is at least the maximum score and grows with the number of
-    strong sites.
-    """
+    """Scan all motif records and return the maximum score over positions for each sequence."""
     scores = np.empty((len(sequences), len(motifs)), dtype=np.float32)
     for motif_index, record in enumerate(motifs):
-        if not isinstance(record["model"], mimosa.PWM):
-            logger.warning(
-                "Model %s is not a PWM; its scores are assumed to be natural-log odds.",
-                record["motif_id"],
-            )
         track = mimosa.scan(record["model"], sequences, strands="best")
-        row_lengths = np.diff(track.offsets)
-        if np.any(row_lengths == 0):
+        if np.any(np.diff(track.offsets) == 0):
             raise ValueError(
                 f"Mimosa returned an empty score row for motif_id {record['motif_id']}."
             )
-        starts = track.offsets[:-1]
-        top = np.maximum.reduceat(track.data, starts)
-        total = np.add.reduceat(
-            np.exp(track.data - np.repeat(top, row_lengths)), starts, dtype=np.float64
-        )
-        scores[:, motif_index] = top + np.log(total)
+        scores[:, motif_index] = np.maximum.reduceat(track.data, track.offsets[:-1])
     return scores
 
 
@@ -352,7 +336,7 @@ def esdeg(
         sequences[index] for index in selected_idx
     )
     scores = process_all_models(selected_sequences, motifs)
-    auprc, auroc, p_value_auprc, p_value_auroc = permutation_enrichment(
+    auprc, p_value_auprc = permutation_enrichment(
         scores[: foreground_idx.size],
         scores[foreground_idx.size :],
         matched_to,
@@ -367,13 +351,10 @@ def esdeg(
             "tf_class": [motif["tf_class"] for motif in motifs],
             "tf_family": [motif["tf_family"] for motif in motifs],
             "auprc": auprc,
-            "auroc": auroc,
             "p_value_auprc": p_value_auprc,
-            "p_value_auroc": p_value_auroc,
         }
     )
     result["p_value_auprc_adj"] = _adjust_pvalues(result["p_value_auprc"])
-    result["p_value_auroc_adj"] = _adjust_pvalues(result["p_value_auroc"])
     if motif_db == "jaspar" and not model_paths:
         cluster_path = resources.files("esdeg").joinpath(f"clusters/{taxon}.tsv")
         result["jaspar_cluster"] = result["motif_id"].map(get_motif_to_cluster(str(cluster_path)))

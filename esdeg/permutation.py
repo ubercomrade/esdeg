@@ -1,29 +1,25 @@
-"""auPRC and auROC enrichment with permutation p-values calibrated to the matched design."""
+"""auPRC enrichment with permutation p-values calibrated to the matched design."""
 
 from __future__ import annotations
 
 import numba as nb
 import numpy as np
 from scipy.special import ndtr
-from scipy.stats import rankdata
 
 PAIRED_PERMUTATIONS = 2000
 CF_LIMIT = 12.0
 
 
 @nb.njit(cache=True)
-def _statistics(labels_in_rank_order, inverse, out):
-    """Write U (foreground-above-background pairs) and the AP sum (= N_foreground * AP)."""
+def _statistics(labels_in_rank_order, inverse):
+    """Return the AP sum (= N_foreground * AP) of labels read in descending score order."""
     hits = 0
-    pairs = 0
     total = 0.0
     for i in range(labels_in_rank_order.shape[0]):
         value = np.int64(labels_in_rank_order[i])
         hits += value
-        pairs += (1 - value) * hits
         total += value * hits * inverse[i]
-    out[0] = pairs
-    out[1] = total
+    return total
 
 
 @nb.njit(parallel=True, cache=True)
@@ -33,12 +29,12 @@ def _observed(order, labels, inverse, out):
         ranked = np.empty(n, dtype=np.uint8)
         for i in range(n):
             ranked[i] = labels[order[j, i]]
-        _statistics(ranked, inverse, out[j])
+        out[j] = _statistics(ranked, inverse)
 
 
 @nb.njit(cache=True)
-def _random_statistics(n, n_foreground, seed, inverse, out):
-    """U and AP sum of one uniformly random arrangement, by selection sampling in one pass.
+def _random_statistics(n, n_foreground, seed, inverse):
+    """AP sum of one uniformly random arrangement, by selection sampling in one pass.
 
     Position i is foreground with probability (foreground still needed) / (positions left), which
     yields exactly n_foreground foreground positions. Randomness is a splitmix64 stream seeded by
@@ -47,7 +43,6 @@ def _random_statistics(n, n_foreground, seed, inverse, out):
     state = np.uint64(seed)
     need = n_foreground
     hits = 0
-    pairs = 0
     total = 0.0
     for i in range(n):
         state += np.uint64(0x9E3779B97F4A7C15)
@@ -58,16 +53,13 @@ def _random_statistics(n, n_foreground, seed, inverse, out):
             need -= 1
             hits += 1
             total += hits * inverse[i]
-        else:
-            pairs += hits
-    out[0] = pairs
-    out[1] = total
+    return total
 
 
 @nb.njit(parallel=True, cache=True)
 def _shared_null(n, n_foreground, n_permutations, seed, inverse, out):
     for b in nb.prange(n_permutations):
-        _random_statistics(n, n_foreground, seed + b, inverse, out[b])
+        out[b] = _random_statistics(n, n_foreground, seed + b, inverse)
 
 
 @nb.njit(parallel=True, cache=True)
@@ -85,20 +77,18 @@ def _paired_moments(order, labels, inverse, mean, std):
     n_models, n = order.shape
     n_permutations = labels.shape[0]
     for j in nb.prange(n_models):
-        total = np.zeros(2)
-        total_sq = np.zeros(2)
+        total = 0.0
+        total_sq = 0.0
         ranked = np.empty(n, dtype=np.uint8)
-        value = np.empty(2)
         for b in range(n_permutations):
             for i in range(n):
                 ranked[i] = labels[b, order[j, i]]
-            _statistics(ranked, inverse, value)
+            value = _statistics(ranked, inverse)
             total += value
             total_sq += value * value
-        for k in range(2):
-            mean[j, k] = total[k] / n_permutations
-            variance = (total_sq[k] - total[k] * total[k] / n_permutations) / (n_permutations - 1)
-            std[j, k] = np.sqrt(max(variance, 0.0))
+        mean[j] = total / n_permutations
+        variance = (total_sq - total * total / n_permutations) / (n_permutations - 1)
+        std[j] = np.sqrt(max(variance, 0.0))
 
 
 def _upper_tail(sample, values):
@@ -152,12 +142,11 @@ def permutation_enrichment(
     matched_to: np.ndarray,
     n_permutations: int = 100_000,
     seed: int = 0,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Return auPRC, auROC and their one-sided p-values for each score column.
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return auPRC and its one-sided p-value for each score column.
 
     auPRC is the average precision of the pooled foreground and background ranked by score; its
-    chance level is N_foreground / N_total. auROC is U / (N_foreground * N_background) with
-    midranks for ties.
+    chance level is N_foreground / N_total.
 
     Without tied scores the labels of a column, read in descending score order, are a uniformly
     random arrangement under H0. That null depends only on the group sizes, so one sample of
@@ -190,7 +179,7 @@ def permutation_enrichment(
     )
     observed_labels = (row_order < n_foreground).astype(np.uint8)
     inverse = 1.0 / np.arange(1, n + 1)
-    observed = np.empty((n_models, 2))
+    observed = np.empty(n_models)
     _observed(order, observed_labels, inverse, observed)
 
     group_of_item = np.concatenate((np.arange(n_foreground), matched_to))[row_order]
@@ -198,30 +187,19 @@ def permutation_enrichment(
     start = np.concatenate(([0], np.cumsum(np.bincount(group_of_item, minlength=n_foreground))))
     paired = np.empty((PAIRED_PERMUTATIONS, n), dtype=np.uint8)
     _paired_labels(start, items, paired_seed, paired)
-    paired_mean = np.empty((n_models, 2))
-    paired_std = np.empty((n_models, 2))
+    paired_mean = np.empty(n_models)
+    paired_std = np.empty(n_models)
     _paired_moments(order, paired, inverse, paired_mean, paired_std)
 
-    null = np.empty((n_permutations, 2))
+    null = np.empty(n_permutations)
     _shared_null(n, n_foreground, n_permutations, shared_seed, inverse, null)
 
-    pvalues = np.empty((n_models, 2))
-    for k in range(2):
-        sample = null[:, k]
-        usable = paired_std[:, k] > 0
-        scale = np.where(usable, sample.std(ddof=1) / np.where(usable, paired_std[:, k], 1.0), 1.0)
-        mapped = np.where(
-            usable, sample.mean() + (observed[:, k] - paired_mean[:, k]) * scale, observed[:, k]
-        )
-        pvalues[:, k] = _upper_tail(sample, mapped)
+    usable = paired_std > 0
+    scale = np.where(usable, null.std(ddof=1) / np.where(usable, paired_std, 1.0), 1.0)
+    mapped = np.where(usable, null.mean() + (observed - paired_mean) * scale, observed)
+    pvalues = _upper_tail(null, mapped)
 
-    auprc = observed[:, 1] / n_foreground
-    ranks = rankdata(scores, axis=0)
-    auc = (ranks[:n_foreground].sum(axis=0) - n_foreground * (n_foreground + 1) / 2) / (
-        n_foreground * n_background
-    )
+    auprc = observed / n_foreground
     constant = np.ptp(scores, axis=0) == 0
     auprc = np.where(constant, n_foreground / n, auprc)
-    p_pr = np.where(constant, 1.0, pvalues[:, 1])
-    p_roc = np.where(constant, 1.0, pvalues[:, 0])
-    return auprc, auc, p_pr, p_roc
+    return auprc, np.where(constant, 1.0, pvalues)

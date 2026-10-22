@@ -75,13 +75,12 @@ def read_esdeg_table(esdeg_path):
         "tf_class",
         "tf_family",
         "auprc",
-        "auroc",
         "p_value_auprc_adj",
     }
     missing = sorted(required - set(table.columns))
     if missing:
         raise ValueError(f"Enrichment table is missing required columns: {', '.join(missing)}.")
-    for column in ("auprc", "auroc", "p_value_auprc_adj"):
+    for column in ("auprc", "p_value_auprc_adj"):
         numeric = pd.to_numeric(table[column], errors="coerce")
         if numeric.isna().any():
             raise ValueError(f"Enrichment column {column!r} must be numeric.")
@@ -135,9 +134,8 @@ def annotation(
     de_padj_thr=0.05,
     lfc_thr=1.0,
     counts_filter=5.0,
-    min_auroc=0.5,
 ):
-    """Add expression columns and optionally filter auROC enrichment results."""
+    """Add expression columns and optionally filter auPRC enrichment results."""
     id_to_name = create_gname_converter(gtf_path)
     table = read_esdeg_table(esdeg_path)
     counts_map, deg_map = _expression_maps(deg_path, counts_path, id_to_name)
@@ -149,7 +147,7 @@ def annotation(
     table["de_padj"] = table["tf_name"].map(lambda name: deg_map.get(name, {}).get("padj", np.nan))
 
     if filter_flag:
-        motif_mask = (table["p_value_auprc_adj"] < me_padj_thr) & (table["auroc"] >= min_auroc)
+        motif_mask = table["p_value_auprc_adj"] < me_padj_thr
         expression_mask = ((table["de_padj"] < de_padj_thr) & (table["lfc"].abs() >= lfc_thr)) | (
             table["counts"] >= counts_filter
         )

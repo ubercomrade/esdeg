@@ -77,7 +77,6 @@ def write_report(df: pd.DataFrame, taxon: str, path_to_output) -> None:
             "tf_class",
             "tf_family",
             "auprc",
-            "auroc",
             "p_value_auprc_adj",
         }
     ]
