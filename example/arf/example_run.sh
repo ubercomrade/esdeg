@@ -1,18 +1,11 @@
 #!/bin/bash
+# JASPAR 2026 plant models on up- and down-regulated genes of an Arabidopsis DEG table.
+# The inputs are not bundled: bash example/arf/example_run.sh <promoters.fa> <deg_table.csv>
+set -euo pipefail
+cd "$(dirname "$0")"
 
-promoters=/home/anton/Documents/genomes/promoters/at/promoters.p1500m0.fa
-table=/home/anton/Documents/PhD/ESDEG/ARF/auxin_meristem_simonini_05h_DEGs.csv
-#time uv run esdeg enrichment \
-#$promoters \
-#/home/anton/Documents/PhD/ESDEG/ARF/auxin_apex_mogzova_55h_DEGs.csv \
-#./auxin_apex_mogzova_55h.all.tsv \
-#-f deg \
-#-m jaspar \
-#-t plants \
-#--xlsx ./auxin_apex_mogzova_55h.all.report.xlsx \
-#--regulated all \
-#--nproc 6
-
+promoters=${1:?promoter FASTA path}
+table=${2:?DEG table path}
 
 time uv run esdeg enrichment \
 $promoters \
@@ -22,9 +15,7 @@ $table \
 -m jaspar \
 -t plants \
 --xlsx ./auxin_meristem_simonini_05h_DEGs.up.report.xlsx \
---regulated up \
---nproc 6
-
+--regulated up
 
 
 time uv run esdeg enrichment \
@@ -35,7 +26,4 @@ $table \
 -m jaspar \
 -t plants \
 --xlsx ./auxin_meristem_simonini_05h_DEGs.down.report.xlsx \
---regulated down \
---nproc 6
-
-
+--regulated down
