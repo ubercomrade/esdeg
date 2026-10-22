@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 
 [[package]]
@@ -207,7 +207,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3,<3.0.0" },
     { name = "panel", specifier = ">=1.5.5,<2.0.0" },
     { name = "plotly", specifier = ">=5.24.1,<6.0.0" },
-    { name = "pyjaspar", specifier = ">=3.0.0,<4.0.0" },
+    { name = "pyjaspar", specifier = ">=4.0.0,<5.0.0" },
     { name = "scipy", specifier = ">=1.14.1,<2.0.0" },
     { name = "tqdm", specifier = ">=4.67.1,<5.0.0" },
     { name = "xlsxwriter", specifier = ">=3.2.0,<4.0.0" },
@@ -599,13 +599,15 @@ wheels = [
 
 [[package]]
 name = "pyjaspar"
-version = "3.0.0"
+version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "biopython" },
-    { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/b2/6967f9289d0522dd7e6a86c0d5a0f2aaa20c01187c555bdfc96ae70a9ba9/pyjaspar-3.0.0.tar.gz", hash = "sha256:b939770e5d9e0fb26137e404a640e8aeb866c84b570e59c42d056f61f561146d", size = 51027623, upload-time = "2023-09-26T15:48:47.311Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/b6/df3470cb7bda17a3cc5afa6e0d5e165db9662ec11efa6e95bdcc9ef967b0/pyjaspar-4.0.0.tar.gz", hash = "sha256:b31893b0791770c044f2b7b424d89abe7cca6d698fe98467bc1cd276a7a2cd90", size = 57036527, upload-time = "2025-10-24T07:53:38.707Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/af/c5112b33abd99c9f296cdc552cca9e0915e7b905dc3e4c99f7b91f442bb2/pyjaspar-4.0.0-py3-none-any.whl", hash = "sha256:01b393f668c3cb552d3d58262a50005b1410e389e0a6bf5d570e976fbdaf01b3", size = 57171738, upload-time = "2025-10-24T07:53:23.967Z" },
+]
 
 [[package]]
 name = "pytest"
@@ -857,15 +859,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0b/02/ae6ceac1baeda530866a85075641cec12989bd8d31af6d5ab4a3e8c92f47/webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923", size = 9721, upload-time = "2017-04-05T20:21:34.189Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/24/2a3e3df732393fed8b3ebf2ec078f05546de641fe1b667ee316ec1dcf3b7/webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78", size = 11774, upload-time = "2017-04-05T20:21:32.581Z" },
-]
-
-[[package]]
-name = "wheel"
-version = "0.45.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8a/98/2d9906746cdc6a6ef809ae6338005b3f21bb568bea3165cfc6a243fdc25c/wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729", size = 107545, upload-time = "2024-11-23T00:18:23.513Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248", size = 72494, upload-time = "2024-11-23T00:18:21.207Z" },
 ]
 
 [[package]]

@@ -13,7 +13,7 @@ import pandas as pd
 from pyjaspar import jaspardb
 
 logger = logging.getLogger(__name__)
-JASPAR_RELEASE = "JASPAR2024"
+JASPAR_RELEASE = "JASPAR2026"
 DNA_ALPHABET = "ACGT"
 
 
@@ -71,7 +71,7 @@ def _record(model, motif_id: str, tf_name, tf_class, tf_family) -> dict:
 
 
 def _hocomoco_records() -> list[dict]:
-    path = resources.files("esdeg").joinpath("hocomoco/H12CORE_annotation.jsonl")
+    path = resources.files("esdeg").joinpath("hocomoco/H14CORE_annotation.jsonl")
     records = []
     with path.open(encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, 1):

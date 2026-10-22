@@ -1,6 +1,6 @@
 # ESDEG
 
-ESDEG is a Python command-line tool for testing transcription-factor motif enrichment in promoters of differentially expressed genes (DEGs) or an arbitrary gene set. It scans promoters with [Mimosa](https://github.com/ubercomrade/mimosa), compares foreground promoters with a background matched on GC content and CpG depletion, and reports auPRC enrichment with permutation p-values calibrated to the matched design and FDR correction. Bundled HOCOMOCO v12 and JASPAR 2024 models are supported.
+ESDEG is a Python command-line tool for testing transcription-factor motif enrichment in promoters of differentially expressed genes (DEGs) or an arbitrary gene set. It scans promoters with [Mimosa](https://github.com/ubercomrade/mimosa), compares foreground promoters with a background matched on GC content and CpG depletion, and reports auPRC enrichment with permutation p-values calibrated to the matched design and FDR correction. Bundled HOCOMOCO v14 and JASPAR 2026 models are supported.
 
 ## Background
 
@@ -89,7 +89,7 @@ esdeg enrichment PROMOTERS INPUT OUTPUT [options]
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `--format {deg,set}` | `deg` | Choose a DEG table or a one-ID-per-line gene set. |
-| `--motifs {jaspar,hocomoco}` | `hocomoco` | Use bundled HOCOMOCO v12 or load JASPAR 2024 models. |
+| `--motifs {jaspar,hocomoco}` | `hocomoco` | Use bundled HOCOMOCO v14 or load JASPAR 2026 models. |
 | `--model PATH` | — | Load a custom Mimosa model; repeat for multiple models. Cannot be combined with `--motifs`. |
 | `--taxon` | `vertebrates` | JASPAR taxonomic group: `plants`, `vertebrates`, `insects`, `urochordates`, `nematodes`, or `fungi`. |
 | `--regulated {all,up,down}` | `all` | Select the DEG direction. |
